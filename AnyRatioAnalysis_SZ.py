@@ -164,7 +164,7 @@ def _calcAppendRatios(singleDf, allBelowOne = True, isotopeList = ['13C','15N','
                     singleDf[isotopeList[i] + '/' + isotopeList[j]] = singleDf['counts' + isotopeList[i]] / singleDf['counts' + isotopeList[j]]
     return singleDf
 
-def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", directInjectionTimeFrames = [], cullAmount = 2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC = 0.10):
+def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", gc_elution_times = [], cullAmount = 2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC = 0.10):
     '''
     Merge all extracted peaks from a given fragment into a single dataframe. For example, if I extracted six peaks, the 13C, 15N, and unsubstituted of fragments at 119 and 109, this would input a list of six dataframes (one per peak) and combine them into two dataframes (one per fragment), each including data from the 13C, 15N, and unsubstituted peaks of that fragment.
     
@@ -229,26 +229,11 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", directInjecti
             massStr = str(df1['mass'+isotopeList[0]].tolist()[0])
             
              #Cull based on time frame for GC peaks (SZ 6/18/2020)
-             #TODO: finish debugging this and extract this into a separate function
-            if gc_elution == "TRUE":
-                # get the scan numbers where absIntensity/TIC for all peaks is above a certain threshhold
-                df1['absIntensity/tic'] = df1['sumAbsIntensity'] / df1['tic']
-                df1 = df1[df1['absIntensity/tic'] > NL_over_TIC]
-
-                if directInjectionTimeFrames != []:
-                    thisTimeFrame = directInjectionTimeFrames[peakIndex]
-                    ret_time_start_index = df1['retTime'].iloc[0]           
-                    ret_time_end_index = round(ret_time_start_index + thisTimeFrame, 4)
-                    df_start_index = df1.index[df1['retTime'] == ret_time_start_index].values
-                    df_end_index = df1.index[df1['retTime'] == ret_time_end_index].values
-                
-                    if df1.empty:
-                        continue
-                    else:
-                        df1 = df1[df_start_index[0]:df_end_index[0]]
+            
+            if gc_elution == "TRUE" & gc_elution_times!=[]:
+                df1 = _cullOnGCPeaks(df, gcElutionTimes, NL_over_TIC)
             
             df1.to_csv('/Users/sarahzeichner/Documents/Caltech/2019-2020/Research/March 16 Data Processing Script/outputtest.csv', index=True, header=True)
-
 
             #Calculates ratio values and adds them to the dataframe
             df1 = _calcAppendRatios(df1,isotopeList = isotopeList)
@@ -268,6 +253,35 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", directInjecti
     return DFList
 
 
+def _cullOnGCPeaks(df, gcElutionTimes=[], NL_over_TIC=0.1):
+    '''
+    Inputs: 
+        df: input dataframe to cull
+        gcElutionTimes: elution of gc peaks, currently specified by the user
+        NL_over_TIC: specific NL/TIC that designates what a "peak" should look like. default 0.1
+    Outputs: 
+       culled df based on input elution times for the peaks
+    '''
+    # get the scan numbers where absIntensity/TIC for all peaks is above a certain threshhold
+    df1['absIntensity/tic'] = df1['sumAbsIntensity'] / df1['tic']
+    df1 = df1[df1['absIntensity/tic'] > NL_over_TIC]
+
+    if directInjectionTimeFrames != []:
+        thisTimeFrame = directInjectionTimeFrames[peakIndex]
+        ret_time_start_index = df1['retTime'].iloc[0]
+        ret_time_end_index = round(
+            ret_time_start_index + thisTimeFrame, 4)
+        df_start_index = df1.index[df1['retTime']
+            == ret_time_start_index].values
+        df_end_index = df1.index[df1['retTime']
+            == ret_time_end_index].values
+
+    if df1.empty:
+        continue
+    else:
+        df1 = df1[df_start_index[0]:df_end_index[0]]
+
+    return df1
 
         
 def _calcOutput(dfList,isotopeList = ['13C','15N','UnSub'],omitRatios = []):
