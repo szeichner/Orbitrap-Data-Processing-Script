@@ -13,7 +13,7 @@ import matplotlib.gridspec as gridspec
 import io
 #import statistics 
 #from statistics import mode 
-#from collections import Counter
+from collections import Counter
 
 def _importPeaksFromFTStatFile(inputFileName):
     '''
@@ -192,13 +192,15 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", gc_elution_ti
             sub = isotopeList[0]
             df1.rename(columns={'mass':'mass'+sub,'counts':'counts'+sub,'absIntensity':'absIntensity'+sub,
                                 'peakNoise':'peakNoise'+sub},inplace=True)
-            #set up a column to track total NL of peaks of fragment of interest for GC elution
+
+            #Set up a column to track total NL of peaks of fragment of interest for GC elution
+            #and set up parameters for this specific fragment elution
             if gc_elution == "TRUE":
-                 df1['sumAbsIntensity'] = df1['absIntensity'+sub]
-            
+                df1['sumAbsIntensity'] = df1['absIntensity'+sub]
+                       
             #helper variable to assign labels to final dataframe
             isotopeListIndex = 0
-            
+
             #add additional dataframes
             for additionalDfIndex in range(numberPeaksPerFragment-1):
                 df2 = peakDF[peakIndex + additionalDfIndex+1].copy()
@@ -228,11 +230,12 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", gc_elution_ti
             
             massStr = str(df1['mass'+isotopeList[0]].tolist()[0])
             
-             #Cull based on time frame for GC peaks (SZ 6/18/2020)
+             #Cull based on time frame for GC peaks
+            if gc_elution == "TRUE" and gc_elution_times != 0:
+                thisGCElutionTime = gc_elution_times[(peakIndex)/numberPeaksPerFragment]
+                df1 = _cullOnGCPeaks(df1, peakIndex, thisGCElutionTime, NL_over_TIC)
             
-            if gc_elution == "TRUE" & gc_elution_times!=[]:
-                df1 = _cullOnGCPeaks(df, gcElutionTimes, NL_over_TIC)
-            
+            #Test by writing to CSV
             df1.to_csv('/Users/sarahzeichner/Documents/Caltech/2019-2020/Research/March 16 Data Processing Script/outputtest.csv', index=True, header=True)
 
             #Calculates ratio values and adds them to the dataframe
@@ -253,7 +256,7 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", gc_elution_ti
     return DFList
 
 
-def _cullOnGCPeaks(df, gcElutionTimes=[], NL_over_TIC=0.1):
+def _cullOnGCPeaks(df, peakIndex, gcElutionTimeFrame = (0,0), NL_over_TIC=0.1):
     '''
     Inputs: 
         df: input dataframe to cull
@@ -263,25 +266,21 @@ def _cullOnGCPeaks(df, gcElutionTimes=[], NL_over_TIC=0.1):
        culled df based on input elution times for the peaks
     '''
     # get the scan numbers where absIntensity/TIC for all peaks is above a certain threshhold
-    df1['absIntensity/tic'] = df1['sumAbsIntensity'] / df1['tic']
-    df1 = df1[df1['absIntensity/tic'] > NL_over_TIC]
+    df['absIntensity/tic'] = df['sumAbsIntensity'] / df['tic']
+    df = df[df['absIntensity/tic'] > NL_over_TIC]
 
-    if directInjectionTimeFrames != []:
-        thisTimeFrame = directInjectionTimeFrames[peakIndex]
-        ret_time_start_index = df1['retTime'].iloc[0]
-        ret_time_end_index = round(
-            ret_time_start_index + thisTimeFrame, 4)
-        df_start_index = df1.index[df1['retTime']
-            == ret_time_start_index].values
-        df_end_index = df1.index[df1['retTime']
-            == ret_time_end_index].values
-
-    if df1.empty:
-        continue
+    if gcElutionTimeFrame != (0,0):
+        start_index_val = df.loc[df['retTime'] == gcElutionTimeFrame[0]]
+        end_index_val = df.loc[df['retTime'] == gcElutionTimeFrame[1]]
+        start_index  = df.iloc[start_index_val] #TODO: FIX THIS
+        end_index = df.iloc[end_index_val]
     else:
-        df1 = df1[df_start_index[0]:df_end_index[0]]
+        start_index = df.first_valid_index()
+        end_index = df.last_valid_index()
 
-    return df1
+    #TODO: debug this, and check the rest of the code compatibility with tims code
+    df = df[start_index:end_index]
+    return df
 
         
 def _calcOutput(dfList,isotopeList = ['13C','15N','UnSub'],omitRatios = []):
@@ -449,11 +448,11 @@ def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCo
     plt.tight_layout()
 
 #Tester, from Tim's code
-inputStandardFile = "/Users/sarahzeichner/Documents/Caltech/2019-2020/Research/March 16 Data Processing Script/AA_std_2_04.xlsx"
+inputStandardFile = "/Users/sarahzeichner/Documents/Caltech/2019-2020/Research/Orbitrap Data Processing Script/AA_std_2_04.xlsx"
 isotopeList = ['UnSub','15N','13C']
-times = [0.19, 0.19, 0.19,0.19,0.19,0.19,0.19,0.19,0.19,0.19,0.19,0.19,0.19,0.19,0.19] 
+peakTimeFrames = [(5.65,5.85), (5.65,5.85), (9.74,10.04), (10.00,10.30), (13.74,14.04)]
 omitRatios = []
 peaks = _importPeaksFromFTStatFile(inputStandardFile)
 pandas = _convertToPandasDataFrame(peaks)
-Merged = _combineSubstituted(pandas, cullOn = None, gc_elution = "TRUE", directInjectionTimeFrames = [], cullAmount = 2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC = 0.10)
+Merged = _combineSubstituted(pandas, None, "TRUE", peakTimeFrames, 2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC = 0.10)
 print("done")
