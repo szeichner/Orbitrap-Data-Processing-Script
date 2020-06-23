@@ -270,10 +270,10 @@ def _cullOnGCPeaks(df, peakIndex, gcElutionTimeFrame = (0,0), NL_over_TIC=0.1):
     df = df[df['absIntensity/tic'] > NL_over_TIC]
 
     if gcElutionTimeFrame != (0,0):
-        start_index_val = df.loc[df['retTime'] == gcElutionTimeFrame[0]]
-        end_index_val = df.loc[df['retTime'] == gcElutionTimeFrame[1]]
-        start_index  = df.iloc[start_index_val] #TODO: FIX THIS
-        end_index = df.iloc[end_index_val]
+        start_index = df.loc[df['retTime'] == gcElutionTimeFrame[0]].index.values.astype(int)[0]
+        end_index = df.loc[df['retTime'] == gcElutionTimeFrame[1]].index.values.astype(int)[0]
+        #start_index  = df.iloc[start_index_val['T'][0]] #TODO: FIX THIS
+        #end_index = df.iloc[end_index_val]
     else:
         start_index = df.first_valid_index()
         end_index = df.last_valid_index()
