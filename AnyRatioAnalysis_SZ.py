@@ -4,6 +4,7 @@
 
 import matplotlib
 import csv
+import os
 import numpy as np
 import xlrd
 import pandas as pd
@@ -11,8 +12,6 @@ import math
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import io
-#import statistics 
-#from statistics import mode 
 from collections import Counter
 
 def _importPeaksFromFTStatFile(inputFileName):
@@ -79,7 +78,6 @@ def _importPeaksFromFTStatFile(inputFileName):
                                         'scanNumber': scanNumber, 'absIntensity': absIntensity, 'integTime': integrationTime,'TIC*IT': ticTimesIT,'ftRes': ftResolution, 'peakNoise': peakNoise, 'peakRes': peakResolution, 'peakBase': peakBaseline}))
     return(peaks)
 
-
 def _convertToPandasDataFrame(peaks):
     '''
     Import peaks from FT statistic output file into a workable form, step 2
@@ -115,7 +113,6 @@ def _convertToPandasDataFrame(peaks):
         rtnAllPeakDF.append(peakDF)
 
     return(rtnAllPeakDF)
-
 
 def _calculateCountsAndShotNoise(peakDF,CN=4.4,z=1,RN=120000,Microscans=1):
     '''
@@ -283,9 +280,8 @@ def _cullOnGCPeaks(df, gcElutionTimeFrame = (0,0), NL_over_TIC=0.1):
         end_index = df.loc[df['retTime'] == gcElutionTimeFrame[1]].index.values.astype(int)[0]
     
     return start_index, end_index
-
-        
-def _calcOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnSub'],omitRatios = []):
+    
+def _calcRawFileOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnSub'],omitRatios = []):
     '''
     For each ratio of interest, calculates mean, stdev, SErr, RSE, and ShotNoise based on counts. Outputs these in a dictionary which organizes by fragment (i.e different entries for fragments at 119 and 109).
     
@@ -305,8 +301,8 @@ def _calcOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnSub'],om
     for fragmentIndex in range(len(dfList)):
         
         #Adds the peak mass to the output dictionary
-        key = dfList[fragmentIndex].keys()[0]
-        massStr = str(round(dfList[fragmentIndex][key].mean(),1))
+        key = round(dfList[fragmentIndex]['massUnSub'].mean())
+        massStr = str(key)
         
         rtnDict[massStr] = {}
         
@@ -348,6 +344,52 @@ def _calcOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnSub'],om
 
     return rtnDict
 
+def _calcFolderOutput(folderPath, gc_elution=False, gcElutionTimes = [], isotopeList = ['13C','15N','UnSub'],omitRatios = [], outputPath = "output.csv"):
+    '''
+    For each raw file in a folder, calculate mean, stdev, SErr, RSE, and ShotNoise based on counts. Outputs these in a dictionary which organizes by fragment (i.e different entries for fragments at 119 and 109).  
+    Inputs:
+        dfList: A list of merged data frames from the _combineSubstituted function. Each dataframe constitutes one fragment.
+        gc_elution: Specify whether you expect elution to change over time, so that you can calculate weighted averages
+        isotopeList: A list of isotopes corresponding to the peaks extracted by FTStat, in the order they were extracted. This must be the same for each fragment. This is used to determine all ratios of interest, i.e. 13C/UnSub, and label them in the proper order. 
+        omitRatios: A list of ratios to ignore. I.e. by default, the script will report 13C/15N ratios, which one may not care about. In this case, the list should be ['13C/15N','15N/13C'], including both versions, to avoid errors. 
+        outputPath = where you want the output csv with statistics to go to.
+        
+    Outputs: 
+        A dictionary giving mean, stdev, StandardError, relative standard error, and shot noise limit for all peaks.  
+    '''
+
+    #get all the file names in the folder with the same end 
+    fileNames = [x for x in os.listdir(folderPath) if x.endswith(".xlsx")]
+        
+    #TODO: debug how to calculate average, std dev , relative standard error for each file
+
+    all_files_df = []
+    #calculate and append statistics for each raw file processed
+    for i in range(len(fileNames)):
+        thesePeaks = _importPeaksFromFTStatFile(fileNames[i])
+        thisPandas = _convertToPandasDataFrame(thesePeaks)
+        thisMergedDF = _combineSubstituted(thisPandas, None, gc_elution, gcElutionTimes, 2, isotopeList, 0.10, None)
+        thisOutput = pd.DataFrame.from_dict(_calcRawFileOutput(thisMergedDF, gc_elution, isotopeList, omitRatios))
+        all_files_df.append(thisOutput)
+
+    output_stats_dict = {}
+    #calculate average, stdev, relstdev for each fragment across replicate measurements 
+    for i in range(len(all_files_df)):
+        #calculate average
+
+        #calculate stdev
+
+        #caclualte rel stdev
+        pass
+
+    
+    #write the results of the functions to a dictionary and print to output
+    keys = outputdf[0].keys()
+    with open(outputPath, 'wb') as output_file:
+        dict_writer = csv.DictWriter(output_file, keys)
+        dict_writer.writeheader()
+        dict_writer.writerows(outputdf)
+        
 def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCols = 2,widthMultiple = 4, heightMultiple = 4):
     '''
     Constructs a series of output plots for easy visualization
@@ -472,5 +514,6 @@ omitRatios = []
 peaks = _importPeaksFromFTStatFile(inputStandardFile)
 pandas = _convertToPandasDataFrame(peaks)
 Merged = _combineSubstituted(pandas, None, gc_elution_on, peakTimeFrames, 2, isotopeList, 0.10, outputPath)
-Output = _calcOutput(Merged, gc_elution_on, isotopeList, omitRatios)
+Output = _calcRawFileOutput(Merged, gc_elution_on, isotopeList, omitRatios)
+print(Output)
 print("done")
