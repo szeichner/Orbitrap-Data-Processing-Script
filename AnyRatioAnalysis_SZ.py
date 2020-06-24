@@ -361,7 +361,7 @@ def _calcFolderOutput(folderPath, gc_elution=False, gcElutionTimes = [], isotope
     #get all the file names in the folder with the same end 
     fileNames = [x for x in os.listdir(folderPath) if x.endswith(".xlsx")]
         
-    #TODO: debug how to calculate average, std dev , relative standard error for each file
+    #TODO: debug how to calculate average, std dev, relative standard error for each file
 
     all_files_df = []
     #calculate and append statistics for each raw file processed
@@ -516,4 +516,3 @@ pandas = _convertToPandasDataFrame(peaks)
 Merged = _combineSubstituted(pandas, None, gc_elution_on, peakTimeFrames, 2, isotopeList, 0.10, outputPath)
 Output = _calcRawFileOutput(Merged, gc_elution_on, isotopeList, omitRatios)
 print(Output)
-print("done")
