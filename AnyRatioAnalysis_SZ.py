@@ -318,7 +318,7 @@ def _calcRawFileOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnS
                             raise Exception('Sorry, cannot find ratios for your input isotopeList')
                     
                     if header in omitRatios:
-                        print(header)
+                        print("Ratios omitted:" + header)
                         continue
                     else: 
                         if gc_elution==True:
@@ -391,6 +391,7 @@ def _calcFolderOutput(folderPath, gc_elution=False, gcElutionTimes = [], isotope
         dict_writer.writerows(outputdf)
         
 def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCols = 2,widthMultiple = 4, heightMultiple = 4):
+   #TODO: Fix this for the gc weighted average calculation
     '''
     Constructs a series of output plots for easy visualization
     
