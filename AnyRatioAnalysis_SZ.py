@@ -138,7 +138,7 @@ def _calculateCountsAndShotNoise(peakDF,CN=4.4,z=1,RN=120000,Microscans=1):
 def _calcAppendRatios(singleDf, allBelowOne = True, isotopeList = ['13C','15N','UnSub']):
     '''
     Calculates both 15N and 13C ratios, writes them such that they are < 1, and adds them to the dataframe.
-    Inputs: 
+    Inputs:                               
             singleDF: An individual pandas dataframe, consisting of multiple peaks from FTStat combined into one dataframe by the _combinedSubstituted function.
             allBelowOne: if True, outputs ratios as 'Sub/unSub' or 'unSub/Sub', whichever is below 1. If false, outputs
             all as 'sub/unSub'. 
@@ -164,7 +164,7 @@ def _calcAppendRatios(singleDf, allBelowOne = True, isotopeList = ['13C','15N','
                     singleDf[isotopeList[i] + '/' + isotopeList[j]] = singleDf['counts' + isotopeList[i]] / singleDf['counts' + isotopeList[j]]
     return singleDf
 
-def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", gc_elution_times = [], cullAmount = 2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC = 0.10):
+def _combineSubstituted(peakDF, cullOn = [], gc_elution = False, gc_elution_times = [], cullAmount = 2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC = 0.10, csv_output_path=None):
     '''
     Merge all extracted peaks from a given fragment into a single dataframe. For example, if I extracted six peaks, the 13C, 15N, and unsubstituted of fragments at 119 and 109, this would input a list of six dataframes (one per peak) and combine them into two dataframes (one per fragment), each including data from the 13C, 15N, and unsubstituted peaks of that fragment.
     
@@ -172,6 +172,8 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", gc_elution_ti
         peakDF: A list of dataframes. The list is the output of the _convertToPandasDataFrame function, and containts
         an individual dataframe for each peak extracted with FTStatistic. 
         cullOn: A target variable, like 'tic', or 'TIC*IT' to use to determine which scans to call. 
+        gc_elution: Set to True if you need to integrate over GC curve, and account for change in ion NL over time
+        gc_elution_times: time frames that each peak elutes at, to cull for
         cullAmount: A number of standard deviations from the mean. If an individual scan has the cullOn variable outside of this range, culls the scan; i.e. if cullOn is 'TIC*IT' and cullAmount is 3, culls scans where TIC*IT is more than 3 standard deviations from its mean. 
         isotopeList: A list of isotopes corresponding to the peaks extracted by FTStat, in the order they were extracted. This must be the same for each fragment. This is used to determine all ratios of interest, i.e. 13C/UnSub, and label them in the proper order. 
        
@@ -187,6 +189,11 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", gc_elution_ti
     for peakIndex in range(len(peakDF)):
         if peakIndex % numberPeaksPerFragment == 0:
             df1 = peakDF[peakIndex].copy()
+            thisGCElutionTimeRange = gc_elution_times[int(peakIndex / numberPeaksPerFragment)]
+
+            #set start and end indices to  defaults based on what is already in the code,  so if errors, it just takes all  data
+            start_index = int(df1.first_valid_index())
+            end_index = int(df1.last_valid_index())
             
             #Rename columns to keep track of them
             sub = isotopeList[0]
@@ -195,7 +202,7 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", gc_elution_ti
 
             #Set up a column to track total NL of peaks of fragment of interest for GC elution
             #and set up parameters for this specific fragment elution
-            if gc_elution == "TRUE":
+            if gc_elution == True:
                 df1['sumAbsIntensity'] = df1['absIntensity'+sub]
                        
             #helper variable to assign labels to final dataframe
@@ -209,7 +216,7 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", gc_elution_ti
                 df2.rename(columns={'mass':'mass'+sub,'counts':'counts'+sub,'absIntensity':'absIntensity'+sub,
                                 'peakNoise':'peakNoise'+sub},inplace=True)
                 
-                if gc_elution == "TRUE":
+                if gc_elution == True:
                     df1['sumAbsIntensity'] = df1['sumAbsIntensity'] + df2['absIntensity'+sub]
                 
                 #Drop duplicate information
@@ -230,15 +237,17 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", gc_elution_ti
             
             massStr = str(df1['mass'+isotopeList[0]].tolist()[0])
             
-             #Cull based on time frame for GC peaks
-            if gc_elution == "TRUE" and gc_elution_times != 0:
-                thisGCElutionTime = gc_elution_times[(peakIndex)/numberPeaksPerFragment]
-                df1 = _cullOnGCPeaks(df1, peakIndex, thisGCElutionTime, NL_over_TIC)
+            #Cull based on time frame for GC peaks
+            if gc_elution == True and gc_elution_times != 0:
+                start_index, end_index = _cullOnGCPeaks(df1, thisGCElutionTimeRange, NL_over_TIC)
+            df1 = df1[start_index:end_index]
             
-            #Test by writing to CSV
-            df1.to_csv('/Users/sarahzeichner/Documents/Caltech/2019-2020/Research/March 16 Data Processing Script/outputtest.csv', index=True, header=True)
+            #Cull for range of intensity not  above a certain threshhold -- will currently be accounted for with user specified time frames
+            #and weighted averaging later on in code
+            #df['absIntensity/tic'] = df['sumAbsIntensity'] / df['tic']
+            #df = df[df['absIntensity/tic'] > NL_over_TIC]
 
-            #Calculates ratio values and adds them to the dataframe
+            #Calculates ratio values and adds them to the dataframe. Weighted averages will be calculated in the next step
             df1 = _calcAppendRatios(df1,isotopeList = isotopeList)
             #Given a key in the dataframe, culls scans outside specified multiple of standard deviation from the mean
             if cullOn != None:
@@ -251,44 +260,38 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = "FALSE", gc_elution_ti
             
             #Adds the combined dataframe to the output list
             DFList.append(df1)
+            #Test by writing to CSV, in case you want to check the output
+            if csv_output_path != None:
+                df1.to_csv(csv_output_path, index=True, header=True)
+ 
         else:
             pass
     return DFList
 
-
-def _cullOnGCPeaks(df, peakIndex, gcElutionTimeFrame = (0,0), NL_over_TIC=0.1):
+def _cullOnGCPeaks(df, gcElutionTimeFrame = (0,0), NL_over_TIC=0.1):
     '''
     Inputs: 
         df: input dataframe to cull
-        gcElutionTimes: elution of gc peaks, currently specified by the user
+        gcElutionTimeFrame: elution of gc peaks, currently specified by the user
         NL_over_TIC: specific NL/TIC that designates what a "peak" should look like. default 0.1
     Outputs: 
        culled df based on input elution times for the peaks
     '''
-    # get the scan numbers where absIntensity/TIC for all peaks is above a certain threshhold
-    df['absIntensity/tic'] = df['sumAbsIntensity'] / df['tic']
-    df = df[df['absIntensity/tic'] > NL_over_TIC]
-
+    # get the scan numbers for the retention  time frame
     if gcElutionTimeFrame != (0,0):
         start_index = df.loc[df['retTime'] == gcElutionTimeFrame[0]].index.values.astype(int)[0]
         end_index = df.loc[df['retTime'] == gcElutionTimeFrame[1]].index.values.astype(int)[0]
-        #start_index  = df.iloc[start_index_val['T'][0]] #TODO: FIX THIS
-        #end_index = df.iloc[end_index_val]
-    else:
-        start_index = df.first_valid_index()
-        end_index = df.last_valid_index()
-
-    #TODO: debug this, and check the rest of the code compatibility with tims code
-    df = df[start_index:end_index]
-    return df
+    
+    return start_index, end_index
 
         
-def _calcOutput(dfList,isotopeList = ['13C','15N','UnSub'],omitRatios = []):
+def _calcOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnSub'],omitRatios = []):
     '''
     For each ratio of interest, calculates mean, stdev, SErr, RSE, and ShotNoise based on counts. Outputs these in a dictionary which organizes by fragment (i.e different entries for fragments at 119 and 109).
     
     Inputs:
         dfList: A list of merged data frames from the _combineSubstituted function. Each dataframe constitutes one fragment.
+        gc_elution: Specify whether you expect elution to change over time, so that you can calculate weighted averages
         isotopeList: A list of isotopes corresponding to the peaks extracted by FTStat, in the order they were extracted. This must be the same for each fragment. This is used to determine all ratios of interest, i.e. 13C/UnSub, and label them in the proper order. 
         omitRatios: A list of ratios to ignore. I.e. by default, the script will report 13C/15N ratios, which one may not care about. In this case, the list should be ['13C/15N','15N/13C'], including both versions, to avoid errors. 
         
@@ -321,15 +324,27 @@ def _calcOutput(dfList,isotopeList = ['13C','15N','UnSub'],omitRatios = []):
                     if header in omitRatios:
                         print(header)
                         continue
-                    else:
-            
-                        #perform calculations and add them to the dictionary     
-                        rtnDict[massStr][header] = {}
-                        rtnDict[massStr][header]['Ratio'] = np.mean(dfList[fragmentIndex][header])
-                        rtnDict[massStr][header]['StDev'] = np.std(dfList[fragmentIndex][header])
-                        rtnDict[massStr][header]['StError'] = rtnDict[massStr][header]['StDev'] / np.power(len(dfList[fragmentIndex]),0.5)
-                        rtnDict[massStr][header]['RelStError'] = rtnDict[massStr][header]['StError'] / rtnDict[massStr][header]['Ratio']
-                        rtnDict[massStr][header]['ShotNoiseLimit by Quadrature'] = (1/dfList[fragmentIndex]['counts' + isotopeList[i]].sum() +1/dfList[fragmentIndex]['counts' + isotopeList[j]].sum())**(1/2)
+                    else: 
+                        if gc_elution==True:
+                            #Weight based on NL value for elution 
+                            rtnDict[massStr][header] = {}
+                            values = dfList[fragmentIndex][header]
+                            weights = dfList[fragmentIndex]['absIntensityUnSub']
+                            average = np.average(values, weights=weights)
+                            rtnDict[massStr][header]['WeightedRVal'] = average
+                            rtnDict[massStr][header]['WeightedStDev'] = math.sqrt(np.average((values-average)**2, weights=weights))
+                            rtnDict[massStr][header]['WeightedStError'] = rtnDict[massStr][header]['WeightedStDev'] / np.power(len(dfList[fragmentIndex]),0.5)
+                            rtnDict[massStr][header]['RelStError'] = rtnDict[massStr][header]['WeightedStError'] / rtnDict[massStr][header]['WeightedRVal']
+                            rtnDict[massStr][header]['ShotNoiseLimit by Quadrature'] = (1/dfList[fragmentIndex]['counts' + isotopeList[i]].sum() +1/dfList[fragmentIndex]['counts' + isotopeList[j]].sum())**(1/2)
+
+                        else:
+                            #perform calculations and add them to the dictionary     
+                            rtnDict[massStr][header] = {}
+                            rtnDict[massStr][header]['Ratio'] = np.mean(dfList[fragmentIndex][header])
+                            rtnDict[massStr][header]['StDev'] = np.std(dfList[fragmentIndex][header])
+                            rtnDict[massStr][header]['StError'] = rtnDict[massStr][header]['StDev'] / np.power(len(dfList[fragmentIndex]),0.5)
+                            rtnDict[massStr][header]['RelStError'] = rtnDict[massStr][header]['StError'] / rtnDict[massStr][header]['Ratio']
+                            rtnDict[massStr][header]['ShotNoiseLimit by Quadrature'] = (1/dfList[fragmentIndex]['counts' + isotopeList[i]].sum() +1/dfList[fragmentIndex]['counts' + isotopeList[j]].sum())**(1/2)
 
     return rtnDict
 
@@ -447,12 +462,15 @@ def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCo
 
     plt.tight_layout()
 
-#Tester, from Tim's code
+#Change these things to test the different code, or comment out if you're using in conjunction with the python notebook
 inputStandardFile = "/Users/sarahzeichner/Documents/Caltech/2019-2020/Research/Orbitrap Data Processing Script/AA_std_2_04.xlsx"
+outputPath = '/Users/sarahzeichner/Documents/Caltech/2019-2020/Research/Orbitrap Data Processing Script/outputtest.csv'
 isotopeList = ['UnSub','15N','13C']
-peakTimeFrames = [(5.65,5.85), (5.65,5.85), (9.74,10.04), (10.00,10.30), (13.74,14.04)]
+gc_elution_on = True
+peakTimeFrames = [(5.65,5.85), (6.82,7.62), (9.74,10.04), (10.00,10.30), (13.74,14.04)]
 omitRatios = []
 peaks = _importPeaksFromFTStatFile(inputStandardFile)
 pandas = _convertToPandasDataFrame(peaks)
-Merged = _combineSubstituted(pandas, None, "TRUE", peakTimeFrames, 2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC = 0.10)
+Merged = _combineSubstituted(pandas, None, gc_elution_on, peakTimeFrames, 2, isotopeList, 0.10, outputPath)
+Output = _calcOutput(Merged, gc_elution_on, isotopeList, omitRatios)
 print("done")
