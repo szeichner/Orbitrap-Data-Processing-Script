@@ -97,11 +97,11 @@ def _convertToPandasDataFrame(peaks):
         except:
             print("Could not find peak " + str(peak))
             continue
-    # putting all scan data into an array
+        # putting all scan data into an array
         for i in range(len(peak['scans'])):
             for j in range(len(columnLabels)):
                 data[i, j] = peak['scans'][i][columnLabels[j]]
-            # scan numbers as separate array for indices
+        # scan numbers as separate array for indices
         scanNumbers = data[:, columnLabels.index('scanNumber')]
         # constructing data frame
         peakDF = pd.DataFrame(data, index=scanNumbers, columns=columnLabels)
@@ -327,10 +327,10 @@ def _calcRawFileOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnS
                             values = dfList[fragmentIndex][header]
                             weights = dfList[fragmentIndex]['absIntensityUnSub']
                             average = np.average(values, weights=weights)
-                            rtnDict[massStr][header]['WeightedRVal'] = average
-                            rtnDict[massStr][header]['WeightedStDev'] = math.sqrt(np.average((values-average)**2, weights=weights))
-                            rtnDict[massStr][header]['WeightedStError'] = rtnDict[massStr][header]['WeightedStDev'] / np.power(len(dfList[fragmentIndex]),0.5)
-                            rtnDict[massStr][header]['RelStError'] = rtnDict[massStr][header]['WeightedStError'] / rtnDict[massStr][header]['WeightedRVal']
+                            rtnDict[massStr][header]['Ratio'] = average
+                            rtnDict[massStr][header]['StDev'] = math.sqrt(np.average((values-average)**2, weights=weights))
+                            rtnDict[massStr][header]['StError'] = rtnDict[massStr][header]['StDev'] / np.power(len(dfList[fragmentIndex]),0.5)
+                            rtnDict[massStr][header]['RelStError'] = rtnDict[massStr][header]['StError'] / rtnDict[massStr][header]['Ratio']
                             rtnDict[massStr][header]['ShotNoiseLimit by Quadrature'] = (1/dfList[fragmentIndex]['counts' + isotopeList[i]].sum() +1/dfList[fragmentIndex]['counts' + isotopeList[j]].sum())**(1/2)
 
                         else:
@@ -344,52 +344,87 @@ def _calcRawFileOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnS
 
     return rtnDict
 
-def _calcFolderOutput(folderPath, gc_elution=False, gcElutionTimes = [], isotopeList = ['13C','15N','UnSub'],omitRatios = [], outputPath = "output.csv"):
+def _convertDictToDF(dictionary):
+    '''
+    Input:
+        dictionary: dictionary of output values
+    Output: 
+        df: output values, to process with other files
+    '''
+    #TODO: debug this
+    keys = dictionary.keys()
+    df = []
+    for key in range(len(keys)):
+        df.append(pd.DataFrame(dictionary[keys[key]]).items)
+    df.to_csv("output.csv", index = False, header=True)
+    return df
+
+def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotopeList = ['13C','15N','UnSub'], omitRatios = [], outputPath = "output.csv"):
     '''
     For each raw file in a folder, calculate mean, stdev, SErr, RSE, and ShotNoise based on counts. Outputs these in a dictionary which organizes by fragment (i.e different entries for fragments at 119 and 109).  
     Inputs:
-        dfList: A list of merged data frames from the _combineSubstituted function. Each dataframe constitutes one fragment.
-        gc_elution: Specify whether you expect elution to change over time, so that you can calculate weighted averages
+        Folder path: Path that all the .xslx raw files are in. Files must be in this format to be processed.
+        gcElutionOn: Specify whether you expect elution to change over time, so that you can calculate weighted averages
+        gcElutionTimes: Time frames to cull the GC peaks for
         isotopeList: A list of isotopes corresponding to the peaks extracted by FTStat, in the order they were extracted. This must be the same for each fragment. This is used to determine all ratios of interest, i.e. 13C/UnSub, and label them in the proper order. 
         omitRatios: A list of ratios to ignore. I.e. by default, the script will report 13C/15N ratios, which one may not care about. In this case, the list should be ['13C/15N','15N/13C'], including both versions, to avoid errors. 
-        outputPath = where you want the output csv with statistics to go to.
+        outputPath: where you want the output csv with statistics to go to.
         
     Outputs: 
         A dictionary giving mean, stdev, StandardError, relative standard error, and shot noise limit for all peaks.  
     '''
 
+    ratio = "Ratio"
+    stdev = "StdDev"
+    rtnAllFilesDF = []
+    header = ["FileNumber", "Fragment", "Average", "StdDev", "StdError", "RelStdError"]
     #get all the file names in the folder with the same end 
     fileNames = [x for x in os.listdir(folderPath) if x.endswith(".xlsx")]
-        
-    #TODO: debug how to calculate average, std dev, relative standard error for each file
 
-    all_files_df = []
-    #calculate and append statistics for each raw file processed
+
+    #Process through each raw file added and calculate statistics for fragments of interest
     for i in range(len(fileNames)):
-        thesePeaks = _importPeaksFromFTStatFile(fileNames[i])
+        df = []
+        thisFileName = str(folderPath + '/' + fileNames[i])
+        thesePeaks = _importPeaksFromFTStatFile(thisFileName)
         thisPandas = _convertToPandasDataFrame(thesePeaks)
-        thisMergedDF = _combineSubstituted(thisPandas, None, gc_elution, gcElutionTimes, 2, isotopeList, 0.10, None)
-        thisOutput = pd.DataFrame.from_dict(_calcRawFileOutput(thisMergedDF, gc_elution, isotopeList, omitRatios))
-        all_files_df.append(thisOutput)
+        thisMergedDF = _combineSubstituted(thisPandas, None, gcElutionOn, gcElutionTimes, 2, isotopeList, 0.10, None)
+        thisOutput = _calcRawFileOutput(thisMergedDF, gcElutionOn, isotopeList, omitRatios)
+        keys = thisOutput.keys()
+        '''for key in range(len(keys)):
+            df.append(pd.DataFrame(thisOutput[keys[key]]).items)
+        pd.DataFrame(df).to_csv(str(folderPath + '/' + fileNames[i] + "_output.csv"), index = False, header=True)'''
 
-    output_stats_dict = {}
-    #calculate average, stdev, relstdev for each fragment across replicate measurements 
-    for i in range(len(all_files_df)):
+        if i == 0:
+            for j in range(len(thisOutput)):
+                
+                rtnAllFilesDF.append(pd.DataFrame.from_dict(thisOutput[j].values()))
+        else:
+            for j in range(len(thisOutput)):
+                rtnAllFilesDF[j].append(thisOutput.values())
+
+    #now there should be a dataframe for each fragment, with each row representing the statistics from a run.
+    #we can now calculate average, stdev, relstdev for each fragment across replicate measurements 
+    if len(fileNames)>1: #only calculate  stats if there is more than one file
+        for i in range(len(rtnAllFilesDF)):
+            print  "test"
         #calculate average
-
+        
         #calculate stdev
 
-        #caclualte rel stdev
-        pass
-
+        #caclulate rel stdev
+    else:
+        cont÷/.
+                    PlotDict['Mass'].append(fragment[0])
+            PlotDict['ShotNoise'].append(fragment[1][currentHeader]['ShotNoiseLimit by Quadrature'])
+            PlotDict['Error'].append(fragment[1][currentHeader]['RelStError'])
+            PlotDict['ErrorShotNoiseRat'] = [a / b for a, b in zip(PlotDict['Error'], PlotDict['ShotNoise'])]
+            PlotDict['Ratio'].append(fragment[1][currentHeader]['Ratio'])inue #don't calculate statistics if there is only one file in the folder
+        cont÷inue #don't calculate statistics if there is only one file in the folder
     
-    #write the results of the functions to a dictionary and print to output
-    keys = outputdf[0].keys()
-    with open(outputPath, 'wb') as output_file:
-        dict_writer = csv.DictWriter(output_file, keys)
-        dict_writer.writeheader()
-        dict_writer.writerows(outputdf)
-        
+    #output results to csv
+    return rtnAllFilesDF
+           
 def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCols = 2,widthMultiple = 4, heightMultiple = 4):
    #TODO: Fix this for the gc weighted average calculation
     '''
@@ -506,14 +541,16 @@ def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCo
     plt.tight_layout()
 
 #Change these things to test the different code, or comment out if you're using in conjunction with the python notebook
-inputStandardFile = "/Users/sarahzeichner/Documents/Caltech/2019-2020/Research/Orbitrap Data Processing Script/AA_std_2_04.xlsx"
+inputStandardFolder = "/Users/sarahzeichner/Documents/Caltech/2019-2020/Research/Quick Orbitrap Methods/data/June2020"
 outputPath = '/Users/sarahzeichner/Documents/Caltech/2019-2020/Research/Orbitrap Data Processing Script/outputtest.csv'
 isotopeList = ['UnSub','15N','13C']
 gc_elution_on = True
 peakTimeFrames = [(5.65,5.85), (6.82,7.62), (9.74,10.04), (10.00,10.30), (13.74,14.04)]
-omitRatios = []
-peaks = _importPeaksFromFTStatFile(inputStandardFile)
+omitRatios = ['15N/13C']
+'''peaks = _importPeaksFromFTStatFile(inputStandardFile)
 pandas = _convertToPandasDataFrame(peaks)
 Merged = _combineSubstituted(pandas, None, gc_elution_on, peakTimeFrames, 2, isotopeList, 0.10, outputPath)
 Output = _calcRawFileOutput(Merged, gc_elution_on, isotopeList, omitRatios)
+df = _convertDictToDF(Output)'''
+Output = _calcFolderOutput(inputStandardFolder, gc_elution_on,  peakTimeFrames,  isotopeList, omitRatios, outputPath)
 print(Output)
