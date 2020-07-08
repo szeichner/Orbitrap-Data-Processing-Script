@@ -379,7 +379,7 @@ def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotop
 
         for peak in range(peakNumber):
             #key is each peak within the dictionary
-            isotopeRatios = thisOutput[keys[peak]].keys()
+            isotopeRatios = list(thisOutput[keys[peak]].keys())
             #subkey is each isotope ratio info for each peak
             for isotopeRatio in range(len(isotopeRatios)):
                 thisPeak = keys[peak]
@@ -404,28 +404,19 @@ def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotop
     rtnAllFilesDF = rtnAllFilesDF.sort_values(by=['Fragment', 'IsotopeRatio'], axis=0, ascending=True)
     rtnAllFilesDF.to_csv(str(folderPath + '/' + "all_data_output.csv"), index = False, header=True)
 
-    #calculate statistics on all the data 
-
-    
-    #now there should be a dataframe for each fragment, with each row representing the statistics from a run.
     #we can now calculate average, stdev, relstdev for each fragment across replicate measurements 
     if len(fileNames)>1: #only calculate  stats if there is more than one file
-        for i in range(len(rtnAllFilesDF)):
-            print  "test"
-        #calculate average
-        
-        #calculate stdev
+        avgDF = rtnAllFilesDF.groupby(['Fragment', 'IsotopeRatio'])["Average"].mean()
+        countDF = rtnAllFilesDF.groupby(['Fragment', 'IsotopeRatio'])["Average"].count()
+        stdDF = rtnAllFilesDF.groupby(['Fragment', 'IsotopeRatio'])["Average"].std()
+        sqrtCountDF = np.power(countDF, 0.5)
+        stdErrorDF = np.divide(stdDF, sqrtCountDF)
+        relStdErrorDF = np.divide(stdErrorDF, avgDF)
 
-        #caclulate rel stdev
-            continue
-    else:
-            PlotDict['Mass'].append(fragment[0])
-            PlotDict['ShotNoise'].append(fragment[1][currentHeader]['ShotNoiseLimit by Quadrature'])
-            PlotDict['Error'].append(fragment[1][currentHeader]['RelStError'])
-            PlotDict['ErrorShotNoiseRat'] = [a / b for a, b in zip(PlotDict['Error'], PlotDict['ShotNoise'])]
-            PlotDict['Ratio'].append(fragment[1][currentHeader]['Ratio']) #don't calculate statistics if there is only one file in the folder
-         #don't calculate statistics if there is only one file in the folder
-    
+    statsDF = pd.DataFrame([avgDF, countDF, stdDF, stdErrorDF, relStdErrorDF], index=["Avg R Val", "N", "StdDev", "StdError", "RelStdError"]) 
+
+    #statsDF.rename(index={0:'IsotopeRatio',1:'Average R Val',2:'n', 3:'StdDev', 4:'StdError', 5:'RelStdError'}, inplace=True)
+    statsDF.to_csv(str(folderPath + '/' + "stats_output.csv"), index = True, header=True)
     #output results to csv
     return rtnAllFilesDF
            
@@ -545,16 +536,16 @@ def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCo
     plt.tight_layout()
 
 #Change these things to test the different code, or comment out if you're using in conjunction with the python notebook
-inputStandardFolder = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020"
+'''inputStandardFolder = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020"
 inputStandardFile = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020/AA_std_2_15_agc_2e4.xlsx"
 outputPath = '/Users/sarahzeichner/Documents/Caltech/Research/Orbitrap Data Processing Script/outputtest.csv'
 isotopeList = ['UnSub','15N','13C']
 gc_elution_on = True
 peakTimeFrames = [(5.65,5.85), (6.82,7.62), (9.74,10.04), (10.00,10.30), (13.74,14.04)]
 omitRatios = ['15N/13C']
-'''peaks = _importPeaksFromFTStatFile(inputStandardFile)
+peaks = _importPeaksFromFTStatFile(inputStandardFile)
 pandas = _convertToPandasDataFrame(peaks)
 Merged = _combineSubstituted(pandas, None, gc_elution_on, peakTimeFrames, 2, isotopeList, 0.10, outputPath)
 Output = _calcRawFileOutput(Merged, gc_elution_on, isotopeList, omitRatios)'''
-'''df = _convertDictToDF(Output)'''
-Output = _calcFolderOutput(inputStandardFolder, gc_elution_on,  peakTimeFrames,  isotopeList, omitRatios, outputPath)
+'''df = _convertDictToDF(Output)
+Output = _calcFolderOutput(inputStandardFolder, gc_elution_on,  peakTimeFrames,  isotopeList, omitRatios, outputPath)'''
