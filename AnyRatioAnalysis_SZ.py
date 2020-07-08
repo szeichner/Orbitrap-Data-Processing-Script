@@ -344,7 +344,7 @@ def _calcRawFileOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnS
 
     return rtnDict
 
-def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotopeList = ['13C','15N','UnSub'], omitRatios = [], outputPath = "output.csv"):
+def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotopeList = ['13C','15N','UnSub'], omitRatios = []):
     '''
     For each raw file in a folder, calculate mean, stdev, SErr, RSE, and ShotNoise based on counts. Outputs these in a dictionary which organizes by fragment (i.e different entries for fragments at 119 and 109).  
     Inputs:
@@ -353,10 +353,11 @@ def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotop
         gcElutionTimes: Time frames to cull the GC peaks for
         isotopeList: A list of isotopes corresponding to the peaks extracted by FTStat, in the order they were extracted. This must be the same for each fragment. This is used to determine all ratios of interest, i.e. 13C/UnSub, and label them in the proper order. 
         omitRatios: A list of ratios to ignore. I.e. by default, the script will report 13C/15N ratios, which one may not care about. In this case, the list should be ['13C/15N','15N/13C'], including both versions, to avoid errors. 
-        outputPath: where you want the output csv with statistics to go to.
         
     Outputs: 
-        A dictionary giving mean, stdev, StandardError, relative standard error, and shot noise limit for all peaks.  
+        A dataframe giving mean, stdev, standardError, relative standard error, and shot noise limit for all peaks. 
+        A dataframe with calculated statistics (average, stddev, stderror and rel std error)
+        (Both the dataframes are also exported as csvs to the original input folder)
     '''
 
     ratio = "Ratio"
@@ -374,7 +375,7 @@ def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotop
         thisPandas = _convertToPandasDataFrame(thesePeaks)
         thisMergedDF = _combineSubstituted(thisPandas, None, gcElutionOn, gcElutionTimes, 2, isotopeList, 0.10, None)
         thisOutput = _calcRawFileOutput(thisMergedDF, gcElutionOn, isotopeList, omitRatios)
-        keys = thisOutput.keys()
+        keys = list(thisOutput.keys())
         peakNumber = len(keys)
 
         for peak in range(peakNumber):
@@ -418,7 +419,7 @@ def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotop
     #statsDF.rename(index={0:'IsotopeRatio',1:'Average R Val',2:'n', 3:'StdDev', 4:'StdError', 5:'RelStdError'}, inplace=True)
     statsDF.to_csv(str(folderPath + '/' + "stats_output.csv"), index = True, header=True)
     #output results to csv
-    return rtnAllFilesDF
+    return rtnAllFilesDF, statsDF
            
 def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCols = 2,widthMultiple = 4, heightMultiple = 4):
    #TODO: Fix this for the gc weighted average calculation
@@ -538,7 +539,6 @@ def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCo
 #Change these things to test the different code, or comment out if you're using in conjunction with the python notebook
 '''inputStandardFolder = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020"
 inputStandardFile = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020/AA_std_2_15_agc_2e4.xlsx"
-outputPath = '/Users/sarahzeichner/Documents/Caltech/Research/Orbitrap Data Processing Script/outputtest.csv'
 isotopeList = ['UnSub','15N','13C']
 gc_elution_on = True
 peakTimeFrames = [(5.65,5.85), (6.82,7.62), (9.74,10.04), (10.00,10.30), (13.74,14.04)]
