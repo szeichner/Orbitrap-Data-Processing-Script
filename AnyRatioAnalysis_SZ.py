@@ -344,21 +344,6 @@ def _calcRawFileOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnS
 
     return rtnDict
 
-def _convertDictToDF(dictionary):
-    '''
-    Input:
-        dictionary: dictionary of output values
-    Output: 
-        df: output values, to process with other files
-    '''
-    #TODO: debug this
-    keys = dictionary.keys()
-    df = []
-    for key in range(len(keys)):
-        df.append(pd.DataFrame(dictionary[keys[key]]).items)
-    df.to_csv("output.csv", index = False, header=True)
-    return df
-
 def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotopeList = ['13C','15N','UnSub'], omitRatios = [], outputPath = "output.csv"):
     '''
     For each raw file in a folder, calculate mean, stdev, SErr, RSE, and ShotNoise based on counts. Outputs these in a dictionary which organizes by fragment (i.e different entries for fragments at 119 and 109).  
@@ -377,32 +362,51 @@ def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotop
     ratio = "Ratio"
     stdev = "StdDev"
     rtnAllFilesDF = []
-    header = ["FileNumber", "Fragment", "Average", "StdDev", "StdError", "RelStdError"]
+    header = ["FileNumber", "Fragment", "IsotopeRatio", "Average", "StdDev", "StdError", "RelStdError"]
     #get all the file names in the folder with the same end 
     fileNames = [x for x in os.listdir(folderPath) if x.endswith(".xlsx")]
-
+    peakNumber = 0
 
     #Process through each raw file added and calculate statistics for fragments of interest
     for i in range(len(fileNames)):
-        df = []
         thisFileName = str(folderPath + '/' + fileNames[i])
         thesePeaks = _importPeaksFromFTStatFile(thisFileName)
         thisPandas = _convertToPandasDataFrame(thesePeaks)
         thisMergedDF = _combineSubstituted(thisPandas, None, gcElutionOn, gcElutionTimes, 2, isotopeList, 0.10, None)
         thisOutput = _calcRawFileOutput(thisMergedDF, gcElutionOn, isotopeList, omitRatios)
         keys = thisOutput.keys()
-        '''for key in range(len(keys)):
-            df.append(pd.DataFrame(thisOutput[keys[key]]).items)
-        pd.DataFrame(df).to_csv(str(folderPath + '/' + fileNames[i] + "_output.csv"), index = False, header=True)'''
+        peakNumber = len(keys)
 
-        if i == 0:
-            for j in range(len(thisOutput)):
-                
-                rtnAllFilesDF.append(pd.DataFrame.from_dict(thisOutput[j].values()))
-        else:
-            for j in range(len(thisOutput)):
-                rtnAllFilesDF[j].append(thisOutput.values())
+        for peak in range(peakNumber):
+            #key is each peak within the dictionary
+            isotopeRatios = thisOutput[keys[peak]].keys()
+            #subkey is each isotope ratio info for each peak
+            for isotopeRatio in range(len(isotopeRatios)):
+                thisPeak = keys[peak]
+                thisRatio = isotopeRatios[isotopeRatio]
+                #add subkey to each separate df for isotope specific 
+                thisRVal = thisOutput[thisPeak][thisRatio]["Ratio"]
+                thisStdDev = thisOutput[thisPeak][thisRatio]["StDev"]
+                thisStError = thisOutput[thisPeak][thisRatio]["StError"] 
+                thisRelStError = thisOutput[thisPeak][thisRatio]["RelStError"] 
 
+                thisRow = [thisFileName, thisPeak, thisRatio, thisRVal, thisStdDev, thisStError,thisRelStError]
+
+                #TODO: finish adding these results to a datatable 
+
+                rtnAllFilesDF.append(thisRow)
+
+    rtnAllFilesDF = pd.DataFrame(rtnAllFilesDF)
+    # set the header row as the df header
+    rtnAllFilesDF.columns = header 
+
+    #sort by fragment and isotope ratio, output to csv
+    rtnAllFilesDF = rtnAllFilesDF.sort_values(by=['Fragment', 'IsotopeRatio'], axis=0, ascending=True)
+    rtnAllFilesDF.to_csv(str(folderPath + '/' + "all_data_output.csv"), index = False, header=True)
+
+    #calculate statistics on all the data 
+
+    
     #now there should be a dataframe for each fragment, with each row representing the statistics from a run.
     #we can now calculate average, stdev, relstdev for each fragment across replicate measurements 
     if len(fileNames)>1: #only calculate  stats if there is more than one file
@@ -413,14 +417,14 @@ def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotop
         #calculate stdev
 
         #caclulate rel stdev
+            continue
     else:
-        cont÷/.
-                    PlotDict['Mass'].append(fragment[0])
+            PlotDict['Mass'].append(fragment[0])
             PlotDict['ShotNoise'].append(fragment[1][currentHeader]['ShotNoiseLimit by Quadrature'])
             PlotDict['Error'].append(fragment[1][currentHeader]['RelStError'])
             PlotDict['ErrorShotNoiseRat'] = [a / b for a, b in zip(PlotDict['Error'], PlotDict['ShotNoise'])]
-            PlotDict['Ratio'].append(fragment[1][currentHeader]['Ratio'])inue #don't calculate statistics if there is only one file in the folder
-        cont÷inue #don't calculate statistics if there is only one file in the folder
+            PlotDict['Ratio'].append(fragment[1][currentHeader]['Ratio']) #don't calculate statistics if there is only one file in the folder
+         #don't calculate statistics if there is only one file in the folder
     
     #output results to csv
     return rtnAllFilesDF
@@ -541,8 +545,9 @@ def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCo
     plt.tight_layout()
 
 #Change these things to test the different code, or comment out if you're using in conjunction with the python notebook
-inputStandardFolder = "/Users/sarahzeichner/Documents/Caltech/2019-2020/Research/Quick Orbitrap Methods/data/June2020"
-outputPath = '/Users/sarahzeichner/Documents/Caltech/2019-2020/Research/Orbitrap Data Processing Script/outputtest.csv'
+inputStandardFolder = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020"
+inputStandardFile = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020/AA_std_2_15_agc_2e4.xlsx"
+outputPath = '/Users/sarahzeichner/Documents/Caltech/Research/Orbitrap Data Processing Script/outputtest.csv'
 isotopeList = ['UnSub','15N','13C']
 gc_elution_on = True
 peakTimeFrames = [(5.65,5.85), (6.82,7.62), (9.74,10.04), (10.00,10.30), (13.74,14.04)]
@@ -550,7 +555,6 @@ omitRatios = ['15N/13C']
 '''peaks = _importPeaksFromFTStatFile(inputStandardFile)
 pandas = _convertToPandasDataFrame(peaks)
 Merged = _combineSubstituted(pandas, None, gc_elution_on, peakTimeFrames, 2, isotopeList, 0.10, outputPath)
-Output = _calcRawFileOutput(Merged, gc_elution_on, isotopeList, omitRatios)
-df = _convertDictToDF(Output)'''
+Output = _calcRawFileOutput(Merged, gc_elution_on, isotopeList, omitRatios)'''
+'''df = _convertDictToDF(Output)'''
 Output = _calcFolderOutput(inputStandardFolder, gc_elution_on,  peakTimeFrames,  isotopeList, omitRatios, outputPath)
-print(Output)
