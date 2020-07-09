@@ -161,7 +161,7 @@ def _calcAppendRatios(singleDf, allBelowOne = True, isotopeList = ['13C','15N','
                     singleDf[isotopeList[i] + '/' + isotopeList[j]] = singleDf['counts' + isotopeList[i]] / singleDf['counts' + isotopeList[j]]
     return singleDf
 
-def _combineSubstituted(peakDF, cullOn = [], gc_elution = False, gc_elution_times = [], cullAmount = 2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC = 0.10, csv_output_path=None):
+def _combineSubstituted(peakDF, cullOn = [], cullZeroScansOn = False, gc_elution_on = False, gc_elution_times = [], cullAmount = 2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC = 0.10, csv_output_path=None):
     '''
     Merge all extracted peaks from a given fragment into a single dataframe. For example, if I extracted six peaks, the 13C, 15N, and unsubstituted of fragments at 119 and 109, this would input a list of six dataframes (one per peak) and combine them into two dataframes (one per fragment), each including data from the 13C, 15N, and unsubstituted peaks of that fragment.
     
@@ -199,7 +199,7 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = False, gc_elution_time
 
             #Set up a column to track total NL of peaks of fragment of interest for GC elution
             #and set up parameters for this specific fragment elution
-            if gc_elution == True:
+            if gc_elution_on == True:
                 df1['sumAbsIntensity'] = df1['absIntensity'+sub]
                        
             #helper variable to assign labels to final dataframe
@@ -213,7 +213,7 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = False, gc_elution_time
                 df2.rename(columns={'mass':'mass'+sub,'counts':'counts'+sub,'absIntensity':'absIntensity'+sub,
                                 'peakNoise':'peakNoise'+sub},inplace=True)
                 
-                if gc_elution == True:
+                if gc_elution_on == True:
                     df1['sumAbsIntensity'] = df1['sumAbsIntensity'] + df2['absIntensity'+sub]
                 
                 #Drop duplicate information
@@ -231,18 +231,17 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = False, gc_elution_time
                 df1.loc[df1['absIntensity' + string].isnull(), 'absIntensity' + string] = 0
                 df1.loc[df1['peakNoise' + string].isnull(), 'peakNoise' + string] = 0
                 df1.loc[df1['counts' + string].isnull(), 'counts' + string] = 0 
-            
+
             massStr = str(df1['mass'+isotopeList[0]].tolist()[0])
+
+            #Cull zero scans
+            if cullZeroScansOn == True:
+                df1 = _cullZeroScans(df1)
             
             #Cull based on time frame for GC peaks
-            if gc_elution == True and gc_elution_times != 0:
+            if gc_elution_on == True and gc_elution_times != 0:
                 start_index, end_index = _cullOnGCPeaks(df1, thisGCElutionTimeRange, NL_over_TIC)
             df1 = df1[start_index:end_index]
-            
-            #Cull for range of intensity not  above a certain threshhold -- will currently be accounted for with user specified time frames
-            #and weighted averaging later on in code
-            #df['absIntensity/tic'] = df['sumAbsIntensity'] / df['tic']
-            #df = df[df['absIntensity/tic'] > NL_over_TIC]
 
             #Calculates ratio values and adds them to the dataframe. Weighted averages will be calculated in the next step
             df1 = _calcAppendRatios(df1,isotopeList = isotopeList)
@@ -265,6 +264,18 @@ def _combineSubstituted(peakDF, cullOn = [], gc_elution = False, gc_elution_time
             pass
     return DFList
 
+def _cullZeroScans(df):
+    '''
+    Inputs:
+        df: input dataframe to cull
+    Outputs:
+        culled df without zero
+    '''
+    indexNames = df[(df['counts'] == 0)].index
+    df = df.drop(indexNames, inplace=True)
+    return df
+
+
 def _cullOnGCPeaks(df, gcElutionTimeFrame = (0,0), NL_over_TIC=0.1):
     '''
     Inputs: 
@@ -281,7 +292,7 @@ def _cullOnGCPeaks(df, gcElutionTimeFrame = (0,0), NL_over_TIC=0.1):
     
     return start_index, end_index
     
-def _calcRawFileOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnSub'],omitRatios = []):
+def _calcRawFileOutput(dfList, weightByNLHeight=False, isotopeList = ['13C','15N','UnSub'],omitRatios = []):
     '''
     For each ratio of interest, calculates mean, stdev, SErr, RSE, and ShotNoise based on counts. Outputs these in a dictionary which organizes by fragment (i.e different entries for fragments at 119 and 109).
     
@@ -321,7 +332,7 @@ def _calcRawFileOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnS
                         print("Ratios omitted:" + header)
                         continue
                     else: 
-                        if gc_elution==True:
+                        if weightByNLHeight==True:
                             #Weight based on NL value for elution 
                             rtnDict[massStr][header] = {}
                             values = dfList[fragmentIndex][header]
@@ -344,7 +355,7 @@ def _calcRawFileOutput(dfList, gc_elution=False, isotopeList = ['13C','15N','UnS
 
     return rtnDict
 
-def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotopeList = ['13C','15N','UnSub'], omitRatios = []):
+def _calcFolderOutput(folderPath, cullOn=None, cullZeroScansOn=False, gcElutionOn=False, weightByNLHeight=False, gcElutionTimes = [],  cullAmount=2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC=0.10, omitRatios = [], fileCsvOutputPath=None):
     '''
     For each raw file in a folder, calculate mean, stdev, SErr, RSE, and ShotNoise based on counts. Outputs these in a dictionary which organizes by fragment (i.e different entries for fragments at 119 and 109).  
     Inputs:
@@ -373,8 +384,8 @@ def _calcFolderOutput(folderPath, gcElutionOn=False, gcElutionTimes = [], isotop
         thisFileName = str(folderPath + '/' + fileNames[i])
         thesePeaks = _importPeaksFromFTStatFile(thisFileName)
         thisPandas = _convertToPandasDataFrame(thesePeaks)
-        thisMergedDF = _combineSubstituted(thisPandas, None, gcElutionOn, gcElutionTimes, 2, isotopeList, 0.10, None)
-        thisOutput = _calcRawFileOutput(thisMergedDF, gcElutionOn, isotopeList, omitRatios)
+        thisMergedDF = _combineSubstituted(peakDF=thisPandas,cullOn=cullOn, cullZeroScansOn = cullZeroScansOn, gc_elution_on=gcElutionOn, gc_elution_times=gcElutionTimes, cullAmount=cullAmount, isotopeList=isotopeList, NL_over_TIC=NL_over_TIC, csv_output_path=fileCsvOutputPath)
+        thisOutput = _calcRawFileOutput(thisMergedDF, weightByNLHeight, isotopeList, omitRatios)
         keys = list(thisOutput.keys())
         peakNumber = len(keys)
 
@@ -537,15 +548,16 @@ def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCo
     plt.tight_layout()
 
 #Change these things to test the different code, or comment out if you're using in conjunction with the python notebook
-'''inputStandardFolder = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020"
+inputStandardFolder = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020"
 inputStandardFile = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020/AA_std_2_15_agc_2e4.xlsx"
 isotopeList = ['UnSub','15N','13C']
 gc_elution_on = True
 peakTimeFrames = [(5.65,5.85), (6.82,7.62), (9.74,10.04), (10.00,10.30), (13.74,14.04)]
 omitRatios = ['15N/13C']
-peaks = _importPeaksFromFTStatFile(inputStandardFile)
+'''peaks = _importPeaksFromFTStatFile(inputStandardFile)
 pandas = _convertToPandasDataFrame(peaks)
 Merged = _combineSubstituted(pandas, None, gc_elution_on, peakTimeFrames, 2, isotopeList, 0.10, outputPath)
-Output = _calcRawFileOutput(Merged, gc_elution_on, isotopeList, omitRatios)'''
-'''df = _convertDictToDF(Output)
-Output = _calcFolderOutput(inputStandardFolder, gc_elution_on,  peakTimeFrames,  isotopeList, omitRatios, outputPath)'''
+Output = _calcRawFileOutput(Merged, gc_elution_on, isotopeList, omitRatios)
+df = _convertDictToDF(Output)
+Output = _calcFolderOutput(inputStandardFolder, gc_elution_on,  peakTimeFrames,  isotopeList, omitRatios, outputPath)
+Output,StatsOutput = _calcFolderOutput(inputStandardFolder, cullOn=None, cullZeroScansOn=False, gcElutionOn=gc_elution_on, weightByNLHeight=False, gcElutionTimes = peakTimeFrames,  cullAmount=2, isotopeList = isotopeList, NL_over_TIC=0.10, omitRatios = omitRatios, fileCsvOutputPath=None)'''
