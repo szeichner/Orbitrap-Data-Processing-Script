@@ -281,7 +281,7 @@ def _cullOnGCPeaks(df, gcElutionTimeFrame = (0,0), NL_over_TIC=0.1):
     Inputs: 
         df: input dataframe to cull
         gcElutionTimeFrame: elution of gc peaks, currently specified by the user
-        NL_over_TIC: specific NL/TIC that designates what a "peak" should look like. default 0.1
+        NL_over_TIC: specific NL/TIC that designates what a "peak" should look like. default 0.1, currently not implemented
     Outputs: 
        culled df based on input elution times for the peaks
     '''
@@ -298,7 +298,7 @@ def _calcRawFileOutput(dfList, weightByNLHeight=False, isotopeList = ['13C','15N
     
     Inputs:
         dfList: A list of merged data frames from the _combineSubstituted function. Each dataframe constitutes one fragment.
-        gc_elution: Specify whether you expect elution to change over time, so that you can calculate weighted averages
+        weightByNLHeight: Specify whether you want to calculate weighted averages by NL score
         isotopeList: A list of isotopes corresponding to the peaks extracted by FTStat, in the order they were extracted. This must be the same for each fragment. This is used to determine all ratios of interest, i.e. 13C/UnSub, and label them in the proper order. 
         omitRatios: A list of ratios to ignore. I.e. by default, the script will report 13C/15N ratios, which one may not care about. In this case, the list should be ['13C/15N','15N/13C'], including both versions, to avoid errors. 
         
@@ -359,13 +359,20 @@ def _calcFolderOutput(folderPath, cullOn=None, cullZeroScansOn=False, gcElutionO
     '''
     For each raw file in a folder, calculate mean, stdev, SErr, RSE, and ShotNoise based on counts. Outputs these in a dictionary which organizes by fragment (i.e different entries for fragments at 119 and 109).  
     Inputs:
-        Folder path: Path that all the .xslx raw files are in. Files must be in this format to be processed.
+        folderPath: Path that all the .xslx raw files are in. Files must be in this format to be processed.
+        cullOn: cull specific range of scans
+        cullZeroScansOn: toggle to eliminate any scans with zero counts
         gcElutionOn: Specify whether you expect elution to change over time, so that you can calculate weighted averages
+        weightByNLNeight: Toggle "TRUE" to weight R values by height of NL score
         gcElutionTimes: Time frames to cull the GC peaks for
+        cullAmount: If you pass in a range of scans for "cullOn", this is the number of stddevs beyond which scans are culled. default is 2.
         isotopeList: A list of isotopes corresponding to the peaks extracted by FTStat, in the order they were extracted. This must be the same for each fragment. This is used to determine all ratios of interest, i.e. 13C/UnSub, and label them in the proper order. 
-        omitRatios: A list of ratios to ignore. I.e. by default, the script will report 13C/15N ratios, which one may not care about. In this case, the list should be ['13C/15N','15N/13C'], including both versions, to avoid errors. 
+        NL_over_TIC: Currently not used. Idea would be to cull any scans that the peak is below this percent of total TIC.
+        omitRatios: A list of ratios to ignore. I.e. by default, the script will report 13C/15N ratios, which one may not care about. In this case, the list should be ['13C/15N','15N/13C'], including both versions, to avoid errors.
+        fileCSVOutputPath: path name if you want to output each file as you process
         
     Outputs: 
+        Output is a tuple:
         A dataframe giving mean, stdev, standardError, relative standard error, and shot noise limit for all peaks. 
         A dataframe with calculated statistics (average, stddev, stderror and rel std error)
         (Both the dataframes are also exported as csvs to the original input folder)
