@@ -169,9 +169,11 @@ def _combineSubstituted(peakDF, cullOn = [], cullZeroScansOn = False, gc_elution
         peakDF: A list of dataframes. The list is the output of the _convertToPandasDataFrame function, and containts
         an individual dataframe for each peak extracted with FTStatistic. 
         cullOn: A target variable, like 'tic', or 'TIC*IT' to use to determine which scans to call. 
-        gc_elution: Set to True if you need to integrate over GC curve, and account for change in ion NL over time
+        cullZeroScansOn: Toggle whether or not you want to cull out zero scan counts.
+        gc_elution_on: Set to True if you need to integrate over GC curve, and account for change in ion NL over time
         gc_elution_times: time frames that each peak elutes at, to cull for
         cullAmount: A number of standard deviations from the mean. If an individual scan has the cullOn variable outside of this range, culls the scan; i.e. if cullOn is 'TIC*IT' and cullAmount is 3, culls scans where TIC*IT is more than 3 standard deviations from its mean. 
+        NL_over_TIC: specific NL/TIC that designates what a "peak" should look like. default 0.1, currently not implemented
         isotopeList: A list of isotopes corresponding to the peaks extracted by FTStat, in the order they were extracted. This must be the same for each fragment. This is used to determine all ratios of interest, i.e. 13C/UnSub, and label them in the proper order. 
        
     Outputs: 
@@ -272,7 +274,7 @@ def _cullZeroScans(df):
         culled df without zero
     '''
     indexNames = df[(df['counts'] == 0)].index
-    df = df.drop(indexNames, inplace=True)
+    df = df[~(df == 0).any(axis=1)]
     return df
 
 
