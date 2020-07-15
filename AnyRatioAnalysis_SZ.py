@@ -188,8 +188,7 @@ def _combineSubstituted(peakDF, cullOn = [], cullZeroScansOn = False, gc_elution
     for peakIndex in range(len(peakDF)):
         if peakIndex % numberPeaksPerFragment == 0:
             df1 = peakDF[peakIndex].copy()
-            thisGCElutionTimeRange = gc_elution_times[int(peakIndex / numberPeaksPerFragment)]
-
+            
             #set start and end indices to  defaults based on what is already in the code,  so if errors, it just takes all  data
             start_index = int(df1.first_valid_index())
             end_index = int(df1.last_valid_index())
@@ -202,6 +201,7 @@ def _combineSubstituted(peakDF, cullOn = [], cullZeroScansOn = False, gc_elution
             #Set up a column to track total NL of peaks of fragment of interest for GC elution
             #and set up parameters for this specific fragment elution
             if gc_elution_on == True:
+                thisGCElutionTimeRange = gc_elution_times[int(peakIndex / numberPeaksPerFragment)]
                 df1['sumAbsIntensity'] = df1['absIntensity'+sub]
                        
             #helper variable to assign labels to final dataframe
@@ -565,8 +565,8 @@ peakTimeFrames = [(5.65,5.85), (6.82,7.62), (9.74,10.04), (10.00,10.30), (13.74,
 omitRatios = ['15N/13C']
 '''peaks = _importPeaksFromFTStatFile(inputStandardFile)
 pandas = _convertToPandasDataFrame(peaks)
-Merged = _combineSubstituted(pandas, None, gc_elution_on, peakTimeFrames, 2, isotopeList, 0.10, outputPath)
-Output = _calcRawFileOutput(Merged, gc_elution_on, isotopeList, omitRatios)
-df = _convertDictToDF(Output)
-Output = _calcFolderOutput(inputStandardFolder, gc_elution_on,  peakTimeFrames,  isotopeList, omitRatios, outputPath)
-Output,StatsOutput = _calcFolderOutput(inputStandardFolder, cullOn=None, cullZeroScansOn=False, gcElutionOn=gc_elution_on, weightByNLHeight=False, gcElutionTimes = peakTimeFrames,  cullAmount=2, isotopeList = isotopeList, NL_over_TIC=0.10, omitRatios = omitRatios, fileCsvOutputPath=None)'''
+Merged = _combineSubstituted(pandas, None, gc_elution_on, peakTimeFrames, 2, isotopeList, 0.10, outputPath=None)
+#Output = _calcRawFileOutput(Merged, gc_elution_on, isotopeList, omitRatios)
+df = _convertDictToDF(Output)'''
+#Output = _calcFolderOutput(inputStandardFolder, gc_elution_on,  peakTimeFrames,  isotopeList, omitRatios, outputPath)
+Output, StatsOutput = _calcFolderOutput(inputStandardFolder, cullOn=None, cullZeroScansOn=False, gcElutionOn=gc_elution_on, weightByNLHeight=False, gcElutionTimes = peakTimeFrames,  cullAmount=2, isotopeList = isotopeList, NL_over_TIC=0.10, omitRatios = omitRatios, fileCsvOutputPath=None)
