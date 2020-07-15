@@ -557,16 +557,16 @@ def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCo
     plt.tight_layout()
 
 #Change these things to test the different code, or comment out if you're using in conjunction with the python notebook
-inputStandardFolder = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020"
+'''inputStandardFolder = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020"
 inputStandardFile = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020/AA_std_2_15_agc_2e4.xlsx"
 isotopeList = ['UnSub','15N','13C']
 gc_elution_on = True
 peakTimeFrames = [(5.65,5.85), (6.82,7.62), (9.74,10.04), (10.00,10.30), (13.74,14.04)]
 omitRatios = ['15N/13C']
-'''peaks = _importPeaksFromFTStatFile(inputStandardFile)
+peaks = _importPeaksFromFTStatFile(inputStandardFile)
 pandas = _convertToPandasDataFrame(peaks)
 Merged = _combineSubstituted(pandas, None, gc_elution_on, peakTimeFrames, 2, isotopeList, 0.10, outputPath=None)
 #Output = _calcRawFileOutput(Merged, gc_elution_on, isotopeList, omitRatios)
-df = _convertDictToDF(Output)'''
+df = _convertDictToDF(Output)
 #Output = _calcFolderOutput(inputStandardFolder, gc_elution_on,  peakTimeFrames,  isotopeList, omitRatios, outputPath)
-Output, StatsOutput = _calcFolderOutput(inputStandardFolder, cullOn=None, cullZeroScansOn=False, gcElutionOn=gc_elution_on, weightByNLHeight=False, gcElutionTimes = peakTimeFrames,  cullAmount=2, isotopeList = isotopeList, NL_over_TIC=0.10, omitRatios = omitRatios, fileCsvOutputPath=None)
+Output, StatsOutput = _calcFolderOutput(inputStandardFolder, cullOn=None, cullZeroScansOn=False, gcElutionOn=gc_elution_on, weightByNLHeight=False, gcElutionTimes = peakTimeFrames,  cullAmount=2, isotopeList = isotopeList, NL_over_TIC=0.10, omitRatios = omitRatios, fileCsvOutputPath=None)'''
