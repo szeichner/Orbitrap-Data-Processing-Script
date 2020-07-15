@@ -11,7 +11,7 @@ import os
 import time  
 from watchdog.observers import Observer  
 from watchdog.events import PatternMatchingEventHandler  
-import AnyRatioAnalysis_SZ
+import DataAnalyzer
 
 folderName = ""
 methodPath = ""
@@ -50,7 +50,7 @@ def getSetMethodFile(methodPath):
     
 # Create the root window 
 window = Tk() 
-window.title('File Explorer') 
+window.title('Orbitrap Data Analyzer') 
 window.geometry("500x500") 
 window.config(background = "white") 
    

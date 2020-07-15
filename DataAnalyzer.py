@@ -1,6 +1,10 @@
-# Orbitrap Data Analysis Code
-# Timothy Csernica, modified from Sarah Zeichner
-# March 16, 2020
+##!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Last Modified: Wed July 15, 2020
+
+@author: sarahzeichner
+"""
 
 import matplotlib
 import csv
