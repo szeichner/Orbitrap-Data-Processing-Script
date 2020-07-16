@@ -17,139 +17,119 @@ from watchdog.events import PatternMatchingEventHandler
 import DataAnalyzer
 import MethodFile
 
-#Global variables
-folderName = ""
-methodPath = ""
-methodFile = []
+class Watchdog(PatternMatchingEventHandler, Observer):
+    def __init__(self, path='.', patterns='*', logfunc=print):
+        PatternMatchingEventHandler.__init__(self, patterns)
+        Observer.__init__(self)
+        self.schedule(self, path=path, recursive=False)
+        self.log = logfunc
 
-# Function for opening the file explorer window 
-def browseFiles(): 
-    '''
-    Browse files on the local computer
-    '''
-    if folderName:
-        directory = folderName
-    else:
-        directory = "/"
-    fileName = filedialog.askopenfilename(initialdir = directory, 
-                                          title = "Select a File", 
-                                          filetypes = (("Raw files", 
-                                                        "*.RAW"), 
-                                                       ("all files", 
-                                                        "*.*"))) 
-       
-    # Change label contents 
-    fileExplorerLabel.configure(text="File Opened: " +fileName) 
+    def on_created(self, event):
+        # This function is called when a file is created
+        #process new raw file
+        #process summary statistics for folder
 
-def browseFolders():
-    '''
-    Browse folders and set global variable for the local directory
-    '''
-    folderName = filedialog.askdirectory(initialdir="/",
-                                         title = "select a directory")
-    folderExploreLabel.configure("Folder opened:" +folderName)
+        #TODO: fix logic for watchdog
 
-def createMethodFile():
-    #create fillable form for method file
-    #create a child window
-    #prompt for number of peaks
-    #populate peak objects with input peaks
-    #
-    methodPath = ""
-    
-    #populate methodFile object
+        self.log(f"RAW File added")
 
-    methodFileLabel.configure("MethodFile:" + methodPath)
-    return 
+    def on_deleted(self, event):
+        # This function is called when a file is deleted
+        #process new summary statistics for folder
+        self.log(f"what the f**k! Someone deleted {event.src_path}!")
 
+class GUI:
+    def __init__(self):
+        self.folderName = '.'
+        self.methodFile = []
+        self.watchdog = None
+        self.window = Tk()
+        self.autoWatchOn = 0
+        self.messagebox = Text(width=80, height=10)
+        self.messagebox.pack()
+        frm = Frame(self.window)
 
-def getSetMethodFile(methodPath):
-    '''
-    Get method file in the local directory, and create a MethodFile object to
-    process the data.
-    '''
-    if os.path.exists(methodPath):
-        #methodFile = MethodFile(methodPath) #TODO: get method file object, and return it
-        pass
-    else:
-        print("Please create a method file") #make sure that this 
-        methodFile = []
-    return methodFile
-    #TODO: get method file
-    #if it doesn't exist, prompt to create one
+        Button(frm, text="Create a method file", command=self.create_method_file).pack(side=LEFT)
+        Button(frm, text='Choose data folder directory', command=self.browse_Folders).pack(side=LEFT)
+        self.autoWatchOn = Checkbutton(self.window, text='Automatically watch folder?', onvalue=1, offvalue=0, command=self.automatically_Watch_Files_On)
+        self.autoWatchOn.pack()
+        Button(frm, text='Analyze a raw file', command=self.analyze_File).pack(side=LEFT)
+        Button(frm, text='Process a folder of RAW files', command=self.analyze_Folder).pack(side=LEFT)
 
-#def processDataFolder(folderName):
+        frm.pack(fill=X, expand=1)
+        self.window.mainloop()
 
-def printUpdate(printText):
-    '''
-    Print something everything a file is processed
+    def start_watchdog(self):
+        if self.watchdog is None:
+            self.watchdog = Watchdog(path=self.folderName, logfunc=self.log)
+            self.watchdog.start()
+            self.log('Watchdog started')
+        else:
+            self.log('Watchdog already started')
 
-    Input: text to print
-    '''
-    label = Label(window, text= printText)
-    label.pack() 
-    
-# Create the root window 
-window = Tk() 
-window.title('Orbitrap Data Analyzer') 
-window.geometry("500x500") 
-window.config(background = "white") 
-   
-# Create a method file
-methodFileLabel = Label(window, text = "Create a method file")    
-methodFileLabel.pack()
-methodFileCreationButton = Button(window,text = "Create", command = createMethodFile)  
-methodFileCreationButton.pack()
+    def stop_watchdog(self):
+        if self.watchdog:
+            self.watchdog.stop()
+            self.watchdog = None
+            self.log('Watchdog stopped')
+        else:
+            self.log('Watchdog is not running')
 
-# Set data directory and properties for data analysis
-folderExploreLabel = Label(window, text = "Set the data directory")    
-folderExploreLabel.pack()
-folderExploreButton = Button(window,text = "Browse Folders", command = browseFolders)  
-folderExploreButton.pack()
-automaticallyWatchFilesOn = Checkbutton(window, text='Automatically watch folder?', onvalue=1, offvalue=0)
-automaticallyWatchFilesOn.pack()  
+    def log(self, message):
+        self.messagebox.insert(END, f'{message}\n')
+        self.messagebox.see(END)
 
-# Choose raw file for specific analysis
-fileExplorerLabel = Label(window, text = "Choose RAW file for analysis")
-fileExplorerLabel.pack()
-fileExploreButton = Button(window, text = "Browse Files", command = browseFiles)  
-fileExploreButton.pack()    
+    def browse_Folders(self):
+        self.folderName = filedialog.askdirectory(initialdir="/", title = "select a directory")
+        self.log('Directory set:' + self.folderName)
 
-#Window to print processed data
-   
-exitButton = Button(window,text = "Exit",command = exit)  
-exitButton.pack()
+    def analyze_File(self):
+        if self.folderName != "":
+            pass
+        else:
+            self.log('Choose a working directory')
+            self.browse_Folders()
+        fileName = filedialog.askopenfilename(initialdir = self.folderName,title = "Select RAW file to analyze",filetypes = (("RAW files","*.RAW"),("all files","*.*")))
+        
+        if self.methodFile != []:
+            #TODO: analyze file
+            self.log('Raw file processed:' + fileName)
+        else:
+            self.log("Please create a method file")
+            self.create_method_file()
 
-#TODO: add formatting for window 
+    def analyze_Folder(self):
+        if self.folderName != "":
+            pass
+        else:
+            self.log('Choose a working directory')
+            self.browse_Folders()
 
-# Let the window wait for any events 
-window.mainloop() 
+        if self.methodFile != []:
+            #TODO: analyze folder
+            self.log('Folder processed:' + self.folderName)
+        else:
+            self.log("Please create a method file before you analyze a folder of raw files")
+            self.create_method_file()
 
-#Look for a method file, and call method file creator if it doesn't exist
-if folderName != "":
-    methodFile = getSetMethodFile(folderName)
+    def create_method_file(self):
+        self.methodFile = [] 
 
-#Process raw files for automatic file watcher
-if methodFile != [] and automaticallyWatchFilesOn==1:
-    #Watchdog: WatchDirectoryForRawFiles()
-    #Check for methodFile, otherwise prompt to create
-    #watchdog: WatchDirectoryForJson()
-    #RawFileProcessor.ProcessRawFile.exe(methodFile, rawFileName)
-    #processFile()
-    #calculateSummaryStatistics()
+        #TODO: create method file widget subwindow
+        #create fillable form for method file
+        #create a child window
+        #prompt for number of peaks
+        #populate peak objects with input peaks
+        #
+        #MethodFile.WriteMethodFile()
 
-    printUpdate("RAW File Processed: [fileName], with output")
-    pass
+        self.log('Method file created')
 
-#Process a folder of data upon request
-#if processDataFolder!=""
-    #rpocessDataFolder()
-    #calculateSummaryStatistics()
+    def automatically_Watch_Files_On(self):
+        if self.autoWatchOn == 0:
+            self.stop_watchdog()
+        elif self.autoWatchOn ==1:
+            self.start_watchdog()
 
-#Process a single file, with data visualizations
-#if processSingleFile!=""
-    #processDataFile()
-    #if visualizeData==1:
-        #visualizeData()
-
-#TODO: publish errors to window
+if __name__ == '__main__':
+    GUI()
