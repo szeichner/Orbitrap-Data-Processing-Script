@@ -6,6 +6,7 @@ Last Modified: Thurs July 16, 2020
 @author: sarahzeichner
 """
 #Import general libraries
+
 from tkinter import *
 from tkinter import filedialog 
 import os
@@ -16,6 +17,7 @@ from watchdog.events import PatternMatchingEventHandler
 #Import libraries for different data analysis
 import DataAnalyzer
 import MethodFile
+import Peak
 
 class Watchdog(PatternMatchingEventHandler, Observer):
     def __init__(self, path='.', patterns='*', logfunc=print):
@@ -42,23 +44,28 @@ class GUI:
     def __init__(self):
         self.folderName = '.'
         self.methodFile = []
+        self.numPeaks = 0
+        self.peaks = []
         self.watchdog = None
         self.window = Tk()
         self.autoWatchOn = 0
         self.messagebox = Text(width=80, height=10)
-        self.messagebox.pack()
-        frm = Frame(self.window)
+        self.messagebox.grid(row=6)
 
-        Button(frm, text="Create a method file", command=self.create_method_file).pack(side=LEFT)
-        Button(frm, text='Choose data folder directory', command=self.browse_Folders).pack(side=LEFT)
+        #frm = Frame(self.window)
+        self.window.title("Welcome to the data processor")
+        methodButton = Button(self.window, text="Create a method file", command=self.build_method_file)
+        methodButton.grid(row=0, column=0)
+        dataFolderButton = Button(self.window, text='Choose data folder directory', command=self.browse_Folders)
+        dataFolderButton.grid(row=1, column=0)
         self.autoWatchOn = Checkbutton(self.window, text='Automatically watch folder?', onvalue=1, offvalue=0, command=self.automatically_Watch_Files_On)
-        self.autoWatchOn.pack()
-        Button(frm, text='Analyze a raw file', command=self.analyze_File).pack(side=LEFT)
-        Button(frm, text='Process a folder of RAW files', command=self.analyze_Folder).pack(side=LEFT)
+        self.autoWatchOn.grid(row=1, column=1)
+        rawFileButton = Button(self.window, text='Analyze a raw file', command=self.analyze_File)
+        rawFileButton.grid(row=2, column=0)
+        rawFolderButton = Button(self.window, text='Process a folder of RAW files', command=self.analyze_Folder)
+        rawFolderButton.grid(row=3, column=0)
 
         #TODO: add styling to the GUI
-
-        frm.pack(fill=X, expand=1)
         self.window.mainloop()
 
     def start_watchdog(self):
@@ -98,7 +105,7 @@ class GUI:
             self.log('Raw file processed:' + fileName)
         else:
             self.log("Please create a method file")
-            self.create_method_file()
+            self.build_method_file()
 
     def analyze_Folder(self):
         if self.folderName != "":
@@ -112,20 +119,80 @@ class GUI:
             self.log('Folder processed:' + self.folderName)
         else:
             self.log("Please create a method file before you analyze a folder of raw files")
-            self.create_method_file()
+            self.build_method_file()
 
-    def create_method_file(self):
+    def build_method_file(self):
+
         self.methodFile = [] 
+        topLevel = Toplevel(self.window)
+        l = Label(topLevel, text="Create Method File")
+        l.grid(row=0)
 
-        #TODO: create method file widget subwindow
-        #create fillable form for method file
-        #create a child window
-        #prompt for number of peaks
-        #populate peak objects with input peaks
-        #
-        #MethodFile.WriteMethodFile()
+        def exit_top():
+            topLevel.destroy()
+            topLevel.update()
 
-        self.log('Method file created')
+        def submit_method():
+            topLevel.destroy()
+            self.get_peak_input()
+
+        Label(topLevel, text="Add number of peaks").grid(row=1, column = 0)
+        peakLabelEntry = Entry(topLevel)
+        peakLabelEntry.grid(row=1, column = 1)
+        self.numPeaks = peakLabelEntry.get()
+        submitButton = Button(topLevel, text="Submit", command=submit_method)
+        submitButton.grid(row=2, column=0)
+
+        ''''if self.numPeaks != 0:
+            self.get_peak_input(topLevel, self.numPeaks)'''
+
+        #Button(topLevel, text="Add another peak", command=self.get_peak_input(topLevel)).grid(row=0)
+        #Button(topLevel, text="Specify run information", command=self.specify_run_information).grid(row=1)
+        #Button(topLevel, text="Finish method file creation", command=self.generate_method_file).grid(row=2, column=0)
+        #Button(topLevel, text="Quit method creation", command=exit_top).grid(row=2, column =1)
+
+    def generate_method_file(self):
+        #MethodFile()
+        self.log("Method file created at location:")
+
+    def get_peak_input(self):
+        topLevel = Toplevel(self.window)
+        l = Label(topLevel, text="Create Method File")
+        l.grid(row=0)
+
+        for peak in self.numPeaks:      
+            continue
+
+        Label(t ,text = "Mass").grid(row=0, column = 0)
+        a = Entry(t)
+        a.grid(row=0, column = 2)
+        mass = a.get()
+
+        Label(t ,text = "Tolerance").grid(row=0, column=1)
+        b = Entry(t)
+        b.grid(row=1, column=2)
+        tol = b.get()
+        
+        Label(t ,text = "Tolerance units").grid(row=0, column=2)
+        c = Entry(t)
+        c.grid(row=2, column=2)
+        tolunits = c.get()
+
+        peak = [mass, tol, tolunits]
+        self.peaks.append(peak)
+        self.log("Peak  added:" + str(mass))
+
+    def specify_run_information(self):
+        
+        runInfo = []
+        #isotope list
+        #elutionCurveOn
+        #weightedAvgOn
+        #csvOutputOn
+        #csvOutputPath
+        self.log("Run information  updated." )
+        return runInfo
+
 
     def automatically_Watch_Files_On(self):
         if self.autoWatchOn == 0:

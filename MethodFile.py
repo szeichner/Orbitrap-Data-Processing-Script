@@ -66,7 +66,7 @@ class MethodFile:
     
         f.write(toleranceUnitsString + "=")
         for thisPeak in peaks:
-            f.write("{0},".format(thisPeak.unit))
+            f.write("{0},".format(thisPeak.mtol_unit))
         else:
             f.truncate(f.tell()-1)
             f.write("\n")

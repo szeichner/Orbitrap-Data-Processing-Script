@@ -17,9 +17,7 @@ emass = 0.00054858
 
 # isotopologue input class
 class Peak:
-    def __init__(self, peakType, Formula, mass, mtol, unit):
-        self.peakType = peakType
-        self.chemicalFormula = Formula.formula
+    def __init__(self, mass, mtol, mtol_unit):
         self.mass = mass
         self.mtol = mtol
-        self.unit = unit
+        self.unit = mtol_unit

@@ -9,17 +9,19 @@ Last Modified: Thurs July 16, 2020
 import DataAnalyzer
 
 #Change these things to test the different code, or comment out if you're using in conjunction with the python notebook
-inputStandardFolder = "/Users/sarahzeichner/Documents/Caltech/Research/Direct Injection/DirectInjectionData/July152020/Sample"
+inputStandardFolder = "/Users/sarahzeichner/Documents/Caltech/Research/Direct Injection/DirectInjectionData/July162020/30_percent_c1_label"
 #inputStandardFile = "/Users/sarahzeichner/Documents/Caltech/Research/Quick Orbitrap Methods/data/June2020/AA_std_2_15_agc_2e4.xlsx"
-isotopeList = ['UnSub','15N','13C']
+isotopeList = ['UnSub','13C']
 gc_elution_on = True
-peakTimeFrames = [(6.65,6.78), (7.85, 8.12), (9.95,10.15), (12.32,12.47)]
-omitRatios = ['15N/13C', '13C/15N']
+#peakTimeFrames = [(6.65,6.78), (7.85, 8.12), (9.95,10.15), (12.32,12.47)]
+peakTimeFrames = [(9.95,10.15), (9.95,10.15)]
+#omitRatios = ['15N/13C', '13C/15N']
+omitRatios = []
 #peaks = _importPeaksFromFTStatFile(inputStandardFile)
 #pandas = _convertToPandasDataFrame(peaks)f
 #Merged = _combineSubstituted(pandas, None, gc_elution_on, peakTimeFrames, 2, isotopeList, 0.10, outputPath=None)
 #Output = _calcRawFileOutput(Merged, gc_elution_on, isotopeList, omitRatios)
 #df = _convertDictToDF(Output)
 #Output = _calcFolderOutput(inputStandardFolder, gc_elution_on,  peakTimeFrames,  isotopeList, omitRatios, outputPath)
-Output, StatsOutput = _calcFolderOutput(inputStandardFolder, cullOn=None, cullZeroScansOn=False, gcElutionOn=gc_elution_on, weightByNLHeight=False, gcElutionTimes = peakTimeFrames,  cullAmount=2, isotopeList = isotopeList, NL_over_TIC=0.10, omitRatios = omitRatios, fileCsvOutputPath=None)
+Output, StatsOutput = DataAnalyzer._calcFolderOutput(inputStandardFolder, cullOn=None, cullZeroScansOn=False, gcElutionOn=gc_elution_on, weightByNLHeight=False, gcElutionTimes = peakTimeFrames,  cullAmount=2, isotopeList = isotopeList, NL_over_TIC=0.10, omitRatios = omitRatios, fileCsvOutputPath=None)
 
