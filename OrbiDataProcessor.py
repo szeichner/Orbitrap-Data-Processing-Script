@@ -25,18 +25,18 @@ class Watchdog(PatternMatchingEventHandler, Observer):
         self.log = logfunc
 
     def on_created(self, event):
-        # This function is called when a file is created
-        #process new raw file
-        #process summary statistics for folder
 
         #TODO: fix logic for watchdog
-
-        self.log(f"RAW File added")
+        #ProcessRawFile()
+        #AnalyzeFolder()
+    
+        self.log(f"RAW File added and processed: {event.src_path}")
 
     def on_deleted(self, event):
-        # This function is called when a file is deleted
-        #process new summary statistics for folder
-        self.log(f"what the f**k! Someone deleted {event.src_path}!")
+
+        # AnalyzeFolder()
+
+        self.log(f"Raw file deleted: {event.src_path}!")
 
 class GUI:
     def __init__(self):
@@ -55,6 +55,8 @@ class GUI:
         self.autoWatchOn.pack()
         Button(frm, text='Analyze a raw file', command=self.analyze_File).pack(side=LEFT)
         Button(frm, text='Process a folder of RAW files', command=self.analyze_Folder).pack(side=LEFT)
+
+        #TODO: add styling to the GUI
 
         frm.pack(fill=X, expand=1)
         self.window.mainloop()
