@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Last Modified: Thurs July 16 2020
+Last Modified: Monday July 20, 2020
 
 @author: sarahzeichner
 @author: guannondong
@@ -10,15 +10,8 @@ This is  the parallel file to the MethodFile object that exists in C# to talk to
 except this one is for data processing and creation of method File itself. Any changes to this file
 should be cross correlated with the C# code
 """
-#import dependencies
-import Peak
 
-#Global variables for method file
-inputPeakNumberString = "peakNumber"
-chemicalFormulaString = "chemicalFormula"
-massString = "mass"
-toleranceString = "tolerance"
-toleranceUnitsString = "toleranceUnits"
+import Peak
 
 class MethodFile:
     def __init__(self, inputPeaks, isotopeList, elutionCurveOn=False, weightedAvgOn=False, csvOutputOn = False, csvOutputPath = "output.csv"):
@@ -28,6 +21,17 @@ class MethodFile:
         self.weightedAvgOn = weightedAvgOn
         self.csvOutputOn = csvOutputOn
         self.csvOutputPath = csvOutputPath
+
+        self.inputPeakNumberString = "peakNumber"
+        self.chemicalFormulaString = "chemicalFormula"
+        self.massString = "mass"
+        self.toleranceString = "tolerance"
+        self.toleranceUnitsString = "toleranceUnits"
+        self.isotopeListString = "isotopeList"
+        self.elutionCurveOnString = "elutionOn"
+        self.weightedAvgOnString = "weightedAvgOn"
+        self.csvOutputOnString = "csvOutputOn" 
+        self.csvOutputPathString = "csvOutputPath"
     
     def WriteMethodFile(self, csvOutputOn = False, csvOutputPath="output.csv"):
         '''
@@ -39,40 +43,40 @@ class MethodFile:
 
         peaks = self.peaks
 
-        f.write("peakNumber={0}\n".format(len(peaks)))
+        f.write(self.inputPeakNumberString + "=" + str(len(peaks)))
 
-        f.write(massString + "=")
+        f.write(self.massString + "=")
         for thisPeak in peaks:
             f.write("{0},".format(thisPeak.mass))
         else:
             f.truncate(f.tell()-1)
             f.write("\n")
     
-        f.write(toleranceString + "=")
+        f.write(self.toleranceString + "=")
         for thisPeak in peaks:
             f.write("{0},".format(thisPeak.mtol))
         else:
             f.truncate(f.tell()-1)
             f.write("\n")
     
-        f.write(toleranceUnitsString + "=")
+        f.write(self.toleranceUnitsString + "=")
         for thisPeak in peaks:
             f.write("{0},".format(thisPeak.unit))
         else:
             f.truncate(f.tell()-1)
             f.write("\n")
 
-        f.write("isotopeList" + "=")
+        f.write(self.isotopeListString + "=")
         for thisIsotope in self.isotopeList:
             f.write("{0},".format(thisIsotope))
         else:
             f.truncate(f.tell()-1)
             f.write("\n")    
  
-        f.write("elutionCurveOn={0}\n".format(self.elutionCurveOn))
-        f.write("weightedAvgOn={0}\n".format(self.weightedAvgOn))
-        f.write("csvOutputOn={0}\n".format(self.csvOutputOn))
-        f.write("csvOutputPath={0}\n".format(self.csvOutputPath))
+        f.write(self.elutionCurveOnString + "={0}\n".format(self.elutionCurveOn))
+        f.write(self.weightedAvgOnString + "={0}\n".format(self.weightedAvgOn))
+        f.write(self.csvOutputOnString + "={0}\n".format(self.csvOutputOn))
+        f.write(self.csvOutputPathString + "={0}\n".format(self.csvOutputPath))
 
         f.close()
 
@@ -83,7 +87,7 @@ class MethodFile:
         Input: path to method file
         Output: dictionary containing method information
         '''
-        methodDictionary = []
+        methodDictionary = {}
         with open(path) as f:
             methodLines = f.readlines()
             for line in range(len(methodLines)):
@@ -91,19 +95,27 @@ class MethodFile:
                 thisKey = thisLine[0]
                 thisVal = thisLine[1]
                 methodDictionary[thisKey] = thisVal
+        
+        masses = methodDictionary[self.massString]
+        tolerances = methodDictionary[self.toleranceString]
+        toleranceUnits = methodDictionary[self.toleranceUnitsString]
+
+        for mass in range(len(masses)):
+            self.peaks.append(masses[mass], tolerances[mass], toleranceUnits[mass])
+
+        self.isotopeList = methodDictionary[self.isotopeListString]
+        self.elutionCurveOn = methodDictionary[self.elutionCurveOnString]
+        self.weightedAvgOn = methodDictionary[self.weightedAvgOnString]
+        self.csvOutputOn = methodDictionary[self.csvOutputOnString]
+        self.csvOutputPath = methodDictionary[self.csvOutputPathString]
+
         return methodDictionary
     
-    def GetPeaks(self, methodDictionary):
+    def GetPeaks(self):
         '''
         Get peaks from input method dictionary
-
-        Input: method dictionary
         Output: list of Peaks
         '''
-        peaks = []
-        
-        #TODO: Loop through dictionary and get a list of peaks
-        
-        return peaks
+        return self.peaks
 
 

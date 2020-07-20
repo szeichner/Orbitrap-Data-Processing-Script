@@ -1,7 +1,7 @@
 ##!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Last Modified: Thurs July 16, 2020
+Last Modified: Monday July 20, 2020
 
 @author: sarahzeichner
 """
@@ -30,14 +30,11 @@ class Watchdog(PatternMatchingEventHandler, Observer):
     def on_created(self, event):
         #TODO: fix logic for watchdog
         #ProcessRawFile()
-        #AnalyzeFolder()
-    
+        #self.analyze_folder()
         self.log(f"RAW File added and processed: {event.src_path}")
 
     def on_deleted(self, event):
-
-        # AnalyzeFolder()
-
+        #self.analyze_folder()
         self.log(f"Raw file deleted: {event.src_path}!")
 
 class GUI:
@@ -115,7 +112,8 @@ class GUI:
             self.browse_Folders()
 
         if self.methodFile != []:
-            #TODO: analyze folder
+            #args = get_method_file_properties()
+            #DataAnalyzer._calcFolderOutput(inputStandardFolder, cullOn=None, cullZeroScansOn=False, gcElutionOn=gc_elution_on, weightByNLHeight=False, gcElutionTimes = peakTimeFrames,  cullAmount=2, isotopeList = isotopeList, NL_over_TIC=0.10, omitRatios = omitRatios, fileCsvOutputPath=None)
             self.log('Folder processed:' + self.folderName)
         else:
             self.log("Please create a method file before you analyze a folder of raw files")
@@ -135,10 +133,10 @@ class GUI:
         peaksVar = StringVar()
         peakLabelEntry = Entry(topLevel, textvariable=peaksVar)
         peakLabelEntry.grid(row=1, column = 1)
-        submitButton = Button(topLevel, text="Submit", command= lambda *args:self.get_methodFile_input(peaksVar))
+        submitButton = Button(topLevel, text="SUBMIT", command= lambda *args:self.get_methodFile_input(peaksVar))
         submitButton.grid(row=2, column=0)
 
-        exit_button = Button(topLevel, text="exit", command=exit_button)
+        exit_button = Button(topLevel, text="EXIT", command=exit_button)
         exit_button.grid(row=3, column = 0)
 
     def get_methodFile_input(self, peaksVar):
@@ -197,10 +195,10 @@ class GUI:
         csvOutputPath = Entry(topLevel, textvariable=csvOutputPathVar)
         csvOutputPath.grid(row=lastRowNum+4, column=1)
 
-        submitButton = Button(topLevel, text="Submit", command= lambda *args:self.submit_method_file(numPeaks, massVar, toleranceVar, toleranceUnitsVar, isotopeListVar, weightAvgToggleVar, elutionCurveToggleVar, csvOutputToggleVar, csvOutputPathVar))
+        submitButton = Button(topLevel, text="SUBMIT", command= lambda *args:self.submit_method_file(numPeaks, massVar, toleranceVar, toleranceUnitsVar, isotopeListVar, weightAvgToggleVar, elutionCurveToggleVar, csvOutputToggleVar, csvOutputPathVar))
         submitButton.grid(row=lastRowNum+5, column = 2)
 
-        exit_button = Button(topLevel, text="exit", command=exit_button)
+        exit_button = Button(topLevel, text="EXIT", command=exit_button)
         exit_button.grid(row=lastRowNum+6, column = 2)
 
     def submit_method_file(self, numPeaks, massVar, toleranceVar, toleranceUnitsVar, isotopeListVar, weightAvgToggleVar, elutionCurveToggleVar, csvOutputToggleVar, csvOutputPathVar):
