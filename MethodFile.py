@@ -32,27 +32,18 @@ class MethodFile:
     def WriteMethodFile(self, csvOutputOn = False, csvOutputPath="output.csv"):
         '''
         Write a method file object to a csv
-        Inputs:
-        Outputs:
-
+        Inputs: Method File object
+        Outputs: method file is written out to local directory
         '''
-        #def MethodFileCreator(measurement,inputPeakNumber,peaks,csvOutputOn):
         f = open("method.txt","w")
 
         peaks = self.peaks
 
         f.write("peakNumber={0}\n".format(len(peaks)))
 
-        '''f.write(chemicalFormulaString + "=")
-        for thisPeak in peaks:
-            f.write("{0},".format(thisPeak.chemicalFormula))
-        else:
-            f.truncate(f.tell()-1)
-            f.write("\n")'''
-
         f.write(massString + "=")
         for thisPeak in peaks:
-            f.write("{:.6f},".format(thisPeak.mass))
+            f.write("{0},".format(thisPeak.mass))
         else:
             f.truncate(f.tell()-1)
             f.write("\n")
@@ -66,42 +57,23 @@ class MethodFile:
     
         f.write(toleranceUnitsString + "=")
         for thisPeak in peaks:
-            f.write("{0},".format(thisPeak.mtol_unit))
+            f.write("{0},".format(thisPeak.unit))
         else:
             f.truncate(f.tell()-1)
             f.write("\n")
 
         f.write("isotopeList" + "=")
-        for thisIsotope in peaks.isotopeList:
-            f.write("{0},".format(thisIsotope.unit))
+        for thisIsotope in self.isotopeList:
+            f.write("{0},".format(thisIsotope))
         else:
             f.truncate(f.tell()-1)
             f.write("\n")    
+ 
+        f.write("elutionCurveOn={0}\n".format(self.elutionCurveOn))
+        f.write("weightedAvgOn={0}\n".format(self.weightedAvgOn))
+        f.write("csvOutputOn={0}\n".format(self.csvOutputOn))
+        f.write("csvOutputPath={0}\n".format(self.csvOutputPath))
 
-        for thisIsotope in peaks.isotopeList:
-            f.write("{0},".format(thisIsotope.unit))
-        else:
-            f.truncate(f.tell()-1)
-            f.write("\n")  
-        f.write("elutionCurveOn={0}\n".format(peaks.elutionCurveOn))
-        f.write("weightedAvgOn={0}\n".format(peaks.weightedAvgOn))
-        
-
-        '''f.write("measurementType={0}\n".format(measurement))
-        f.write("polarityMode={0}\n".format(polarity))
-        if measurement == 'GC-reservoir':
-            f.write("minIntensity={0}\n".format(cullingCriteria.minIntensity))
-        elif measurement == 'ESI-syringe pump':
-            f.write("startTime={0}\n".format(cullingCriteria.startTime))
-            f.write("stopTime={0}\n".format(cullingCriteria.stopTime))
-        elif measurement == 'GC direct elution':
-            f.write("arrivalTime={0}\n".format(cullingCriteria.arrivalTime))
-            f.write("exitTime={0}\n".format(cullingCriteria.exitTime))    
-        elif measurement == 'small sample':
-            f.write("minIntrTIC={0}\n".format(cullingCriteria.minIntrTIC))'''
-        if peaks.csvOutputOn != False:
-            f.write("csvFileChoice={0}\n".format(peaks.csvOutputPath))
-    
         f.close()
 
     def ReadMethodFile(self, path):

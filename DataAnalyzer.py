@@ -395,6 +395,7 @@ def _calcFolderOutput(folderPath, cullOn=None, cullZeroScansOn=False, gcElutionO
     #Process through each raw file added and calculate statistics for fragments of interest
     for i in range(len(fileNames)):
         thisFileName = str(folderPath + '/' + fileNames[i])
+        print(thisFileName) #for debugging
         thesePeaks = _importPeaksFromFTStatFile(thisFileName)
         thisPandas = _convertToPandasDataFrame(thesePeaks)
         thisMergedDF = _combineSubstituted(peakDF=thisPandas,cullOn=cullOn, cullZeroScansOn = cullZeroScansOn, gc_elution_on=gcElutionOn, gc_elution_times=gcElutionTimes, cullAmount=cullAmount, isotopeList=isotopeList, NL_over_TIC=NL_over_TIC, csv_output_path=fileCsvOutputPath)

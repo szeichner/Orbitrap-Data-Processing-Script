@@ -13,6 +13,7 @@ import os
 import time  
 from watchdog.observers import Observer  
 from watchdog.events import PatternMatchingEventHandler  
+from functools  import partial
 
 #Import libraries for different data analysis
 import DataAnalyzer
@@ -27,7 +28,6 @@ class Watchdog(PatternMatchingEventHandler, Observer):
         self.log = logfunc
 
     def on_created(self, event):
-
         #TODO: fix logic for watchdog
         #ProcessRawFile()
         #AnalyzeFolder()
@@ -52,14 +52,14 @@ class GUI:
         self.messagebox = Text(width=80, height=10)
         self.messagebox.grid(row=6)
 
-        #frm = Frame(self.window)
         self.window.title("Welcome to the data processor")
         methodButton = Button(self.window, text="Create a method file", command=self.build_method_file)
         methodButton.grid(row=0, column=0)
         dataFolderButton = Button(self.window, text='Choose data folder directory', command=self.browse_Folders)
         dataFolderButton.grid(row=1, column=0)
-        self.autoWatchOn = Checkbutton(self.window, text='Automatically watch folder?', onvalue=1, offvalue=0, command=self.automatically_Watch_Files_On)
-        self.autoWatchOn.grid(row=1, column=1)
+        self.autoWatchOn = IntVar()
+        autoWatchOnCheckbutton = Checkbutton(self.window, text='Automatically watch folder?', variable =self.autoWatchOn, onvalue=1, offvalue=0, command=self.automatically_Watch_Files_On)
+        autoWatchOnCheckbutton.grid(row=1, column=1)
         rawFileButton = Button(self.window, text='Analyze a raw file', command=self.analyze_File)
         rawFileButton.grid(row=2, column=0)
         rawFolderButton = Button(self.window, text='Process a folder of RAW files', command=self.analyze_Folder)
@@ -122,82 +122,109 @@ class GUI:
             self.build_method_file()
 
     def build_method_file(self):
+        def exit_button():
+            topLevel.destroy()
+            topLevel.update()
 
         self.methodFile = [] 
         topLevel = Toplevel(self.window)
         l = Label(topLevel, text="Create Method File")
         l.grid(row=0)
 
-        def exit_top():
+        Label(topLevel, text="Add number of peaks").grid(row=1, column = 0)
+        peaksVar = StringVar()
+        peakLabelEntry = Entry(topLevel, textvariable=peaksVar)
+        peakLabelEntry.grid(row=1, column = 1)
+        submitButton = Button(topLevel, text="Submit", command= lambda *args:self.get_methodFile_input(peaksVar))
+        submitButton.grid(row=2, column=0)
+
+        exit_button = Button(topLevel, text="exit", command=exit_button)
+        exit_button.grid(row=3, column = 0)
+
+    def get_methodFile_input(self, peaksVar):
+        def exit_button():
             topLevel.destroy()
             topLevel.update()
 
-        def submit_method():
-            topLevel.destroy()
-            self.get_peak_input()
-
-        Label(topLevel, text="Add number of peaks").grid(row=1, column = 0)
-        peakLabelEntry = Entry(topLevel)
-        peakLabelEntry.grid(row=1, column = 1)
-        self.numPeaks = peakLabelEntry.get()
-        submitButton = Button(topLevel, text="Submit", command=submit_method)
-        submitButton.grid(row=2, column=0)
-
-        ''''if self.numPeaks != 0:
-            self.get_peak_input(topLevel, self.numPeaks)'''
-
-        #Button(topLevel, text="Add another peak", command=self.get_peak_input(topLevel)).grid(row=0)
-        #Button(topLevel, text="Specify run information", command=self.specify_run_information).grid(row=1)
-        #Button(topLevel, text="Finish method file creation", command=self.generate_method_file).grid(row=2, column=0)
-        #Button(topLevel, text="Quit method creation", command=exit_top).grid(row=2, column =1)
-
-    def generate_method_file(self):
-        #MethodFile()
-        self.log("Method file created at location:")
-
-    def get_peak_input(self):
         topLevel = Toplevel(self.window)
-        l = Label(topLevel, text="Create Method File")
-        l.grid(row=0)
+        numPeaks= int(peaksVar.get())
 
-        for peak in self.numPeaks:      
-            continue
+        Label(topLevel, text="Mass").grid(row=0, column=0)
+        Label(topLevel, text="Tolerance").grid(row=0, column=1)
+        Label(topLevel, text="ToleranceUnits").grid(row=0, column=2)
 
-        Label(t ,text = "Mass").grid(row=0, column = 0)
-        a = Entry(t)
-        a.grid(row=0, column = 2)
-        mass = a.get()
+        massVar = {}
+        toleranceVar = {}
+        toleranceUnitsVar = {}
 
-        Label(t ,text = "Tolerance").grid(row=0, column=1)
-        b = Entry(t)
-        b.grid(row=1, column=2)
-        tol = b.get()
-        
-        Label(t ,text = "Tolerance units").grid(row=0, column=2)
-        c = Entry(t)
-        c.grid(row=2, column=2)
-        tolunits = c.get()
+        for peak in range(numPeaks):      
+            massVar["string{0}".format(peak)] = StringVar()
+            mass = Entry(topLevel, textvariable=massVar["string{0}".format(peak)])
+            mass.grid(row=peak+1, column=0)
+            
+            toleranceVar["string{0}".format(peak)] = StringVar()
+            tolerance = Entry(topLevel, textvariable=toleranceVar["string{0}".format(peak)])
+            tolerance.grid(row=peak+1, column=1)
+            
+            toleranceUnitsVar["string{0}".format(peak)] = StringVar()
+            toleranceUnits = Entry(topLevel, textvariable=toleranceUnitsVar["string{0}".format(peak)])
+            toleranceUnits.grid(row=peak+1, column=2)
 
-        peak = [mass, tol, tolunits]
-        self.peaks.append(peak)
-        self.log("Peak  added:" + str(mass))
+        lastRowNum = numPeaks+3
 
-    def specify_run_information(self):
-        
-        runInfo = []
-        #isotope list
-        #elutionCurveOn
-        #weightedAvgOn
-        #csvOutputOn
-        #csvOutputPath
-        self.log("Run information  updated." )
-        return runInfo
+        Label(topLevel, text="IsotopeList (e.g., ['UnSub','15N','13C'])").grid(row=lastRowNum, column=0)
+        isotopeListVar = StringVar()
+        isotopeList = Entry(topLevel, textvariable=isotopeListVar)
+        isotopeList.grid(row=lastRowNum, column=1)
 
+        Label(topLevel, text="ElutionCurveOn (True/False)").grid(row=lastRowNum+1, column=0)
+        elutionCurveToggleVar = StringVar()
+        elutionCurveToggle = Entry(topLevel, textvariable=elutionCurveToggleVar)
+        elutionCurveToggle.grid(row=lastRowNum+1, column=1)
+
+        Label(topLevel, text="WeightedAvgOn (True/False)").grid(row=lastRowNum+2, column=0)
+        weightAvgToggleVar = StringVar()
+        weightAvgToggle = Entry(topLevel, textvariable=weightAvgToggleVar)
+        weightAvgToggle.grid(row=lastRowNum+2, column=1)
+
+        Label(topLevel, text="CSVOutputOn (True/False)").grid(row=lastRowNum+3, column=0)
+        csvOutputToggleVar = StringVar()
+        csvOutputToggle = Entry(topLevel, textvariable=csvOutputToggleVar)
+        csvOutputToggle.grid(row=lastRowNum+3, column=1)
+
+        Label(topLevel, text="CSVOutputPath").grid(row=lastRowNum+4, column=0)
+        csvOutputPathVar = StringVar()
+        csvOutputPath = Entry(topLevel, textvariable=csvOutputPathVar)
+        csvOutputPath.grid(row=lastRowNum+4, column=1)
+
+        submitButton = Button(topLevel, text="Submit", command= lambda *args:self.submit_method_file(numPeaks, massVar, toleranceVar, toleranceUnitsVar, isotopeListVar, weightAvgToggleVar, elutionCurveToggleVar, csvOutputToggleVar, csvOutputPathVar))
+        submitButton.grid(row=lastRowNum+5, column = 2)
+
+        exit_button = Button(topLevel, text="exit", command=exit_button)
+        exit_button.grid(row=lastRowNum+6, column = 2)
+
+    def submit_method_file(self, numPeaks, massVar, toleranceVar, toleranceUnitsVar, isotopeListVar, weightAvgToggleVar, elutionCurveToggleVar, csvOutputToggleVar, csvOutputPathVar):
+        for peak in range(numPeaks):      
+            thisMass = massVar["string{0}".format(peak)].get()
+            thisTol = toleranceVar["string{0}".format(peak)].get()
+            thisTolUnits = toleranceUnitsVar["string{0}".format(peak)].get()
+            self.peaks.append(Peak.Peak(thisMass, thisTol, thisTolUnits))
+            
+        thisIsotopeList = isotopeListVar.get()
+        thisElutionCurveToggle= elutionCurveToggleVar.get()
+        thisWeightAvgToggle = weightAvgToggleVar.get()
+        thisCsvOutputToggle = csvOutputToggleVar.get()
+        thisCsvOutputPath = csvOutputPathVar.get()
+
+        self.MethodFile = MethodFile.MethodFile(inputPeaks=self.peaks, isotopeList=thisIsotopeList, elutionCurveOn=thisElutionCurveToggle, weightedAvgOn=thisWeightAvgToggle, csvOutputOn=thisCsvOutputToggle, csvOutputPath=thisCsvOutputPath)
+        self.MethodFile.WriteMethodFile()
+        self.log("Method File created at location:" + str(os.curdir) + "/method.txt")
 
     def automatically_Watch_Files_On(self):
-        if self.autoWatchOn == 0:
+        autoWatchToggle = self.autoWatchOn.get()
+        if autoWatchToggle == 0:
             self.stop_watchdog()
-        elif self.autoWatchOn ==1:
+        elif autoWatchToggle ==1:
             self.start_watchdog()
 
 if __name__ == '__main__':
