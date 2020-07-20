@@ -22,6 +22,8 @@ class MethodFile:
         self.csvOutputOn = csvOutputOn
         self.csvOutputPath = csvOutputPath
 
+        self.methodFileName = "method.txt"
+
         self.inputPeakNumberString = "peakNumber"
         self.chemicalFormulaString = "chemicalFormula"
         self.massString = "mass"
@@ -39,7 +41,7 @@ class MethodFile:
         Inputs: Method File object
         Outputs: method file is written out to local directory
         '''
-        f = open("method.txt","w")
+        f = open(self.methodFileName,"w")
 
         peaks = self.peaks
 
