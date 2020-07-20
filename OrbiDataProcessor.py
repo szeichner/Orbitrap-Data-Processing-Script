@@ -4,6 +4,8 @@
 Last Modified: Monday July 20, 2020
 
 @author: sarahzeichner
+
+This is the main GUI for data analysis, that emcompasses functions for data analysis
 """
 #Import general libraries
 
@@ -41,6 +43,7 @@ class Watchdog(PatternMatchingEventHandler, Observer):
         #TODO: fix logic for watchdog
         #ProcessRawFile()
         #self.analyze_folder()
+
         self.log(f"RAW File added and processed: {event.src_path}")
 
     def on_deleted(self, event):
@@ -48,6 +51,7 @@ class Watchdog(PatternMatchingEventHandler, Observer):
         Action upon deletion of a file to the folder
         '''
         #self.analyze_folder()
+        
         self.log(f"Raw file deleted: {event.src_path}!")
 
 class GUI:
@@ -110,7 +114,7 @@ class GUI:
         fileName = filedialog.askopenfilename(initialdir = self.folderName,title = "Select RAW file to analyze",filetypes = (("RAW files","*.RAW"),("all files","*.*")))
         
         if self.methodFile != []:
-            #TODO: analyze file
+            #TODO: AnalyzeFile()
             self.log('Raw file processed:' + fileName)
         else:
             self.log("Please create a method file")
@@ -258,7 +262,7 @@ class GUI:
             self.stop_watchdog()
         elif autoWatchToggle ==1:
             self.start_watchdog()
-            
+
     def start_watchdog(self):
         '''
         Start the watchdog on local directory when the checkbox is clicked

@@ -4,6 +4,8 @@
 Last Modified: Thursday July 16, 2020
 
 @author: sarahzeichner
+
+This code has all of the data processing code, to take data after it has been processed by FT statistic (or equivalent) and calculate isotope ratios based on input
 """
 
 import matplotlib
@@ -18,7 +20,19 @@ import matplotlib.gridspec as gridspec
 import io
 from collections import Counter
 
-def _importPeaksFromFTStatFile(inputFileName):
+import MethodFile
+
+def Process_RAW_File_JSON(methodFilePath, jsonPath):
+    '''
+    Process each JSON with raw file input
+
+    #TODO: incoporate triageModule.py, and readAndRejectJSON.py
+
+    '''
+    #methodFile = MethodFile.MethodFile.ReadMethodFile(methodFilePath)
+
+
+def import_Peaks_From_FTStatFile(inputFileName):
     '''
     Import peaks from FT statistic output file into a workable form, step 1
     
@@ -82,7 +96,7 @@ def _importPeaksFromFTStatFile(inputFileName):
                                         'scanNumber': scanNumber, 'absIntensity': absIntensity, 'integTime': integrationTime,'TIC*IT': ticTimesIT,'ftRes': ftResolution, 'peakNoise': peakNoise, 'peakRes': peakResolution, 'peakBase': peakBaseline}))
     return(peaks)
 
-def _convertToPandasDataFrame(peaks):
+def convert_To_Pandas_DataFrame(peaks):
     '''
     Import peaks from FT statistic output file into a workable form, step 2
     
@@ -111,14 +125,14 @@ def _convertToPandasDataFrame(peaks):
         peakDF = pd.DataFrame(data, index=scanNumbers, columns=columnLabels)
 
         # calculate counts and add to the dataframe
-        peakDF = _calculateCountsAndShotNoise(peakDF)
+        peakDF = calculate_Counts_And_ShotNoise(peakDF)
 
         # add it to the return pandas DF
         rtnAllPeakDF.append(peakDF)
 
     return(rtnAllPeakDF)
 
-def _calculateCountsAndShotNoise(peakDF,CN=4.4,z=1,RN=120000,Microscans=1):
+def calculate_Counts_And_ShotNoise(peakDF,CN=4.4,z=1,RN=120000,Microscans=1):
     '''
     Calculate counts of each scan peak
     
@@ -136,7 +150,7 @@ def _calculateCountsAndShotNoise(peakDF,CN=4.4,z=1,RN=120000,Microscans=1):
                         peakDF['peakNoise']) * (CN/z) *(RN/peakDF['ftRes'])**(0.5) * Microscans**(0.5)
     return peakDF
 
-def _calcAppendRatios(singleDf, allBelowOne = True, isotopeList = ['13C','15N','UnSub']):
+def calc_Append_Ratios(singleDf, allBelowOne = True, isotopeList = ['13C','15N','UnSub']):
     '''
     Calculates both 15N and 13C ratios, writes them such that they are < 1, and adds them to the dataframe.
     Inputs:                               
@@ -165,7 +179,7 @@ def _calcAppendRatios(singleDf, allBelowOne = True, isotopeList = ['13C','15N','
                     singleDf[isotopeList[i] + '/' + isotopeList[j]] = singleDf['counts' + isotopeList[i]] / singleDf['counts' + isotopeList[j]]
     return singleDf
 
-def _combineSubstituted(peakDF, cullOn = [], cullZeroScansOn = False, gc_elution_on = False, gc_elution_times = [], cullAmount = 2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC = 0.10, csv_output_path=None):
+def combine_Substituted_Peaks(peakDF, cullOn = [], cullZeroScansOn = False, gc_elution_on = False, gc_elution_times = [], cullAmount = 2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC = 0.10, csv_output_path=None):
     '''
     Merge all extracted peaks from a given fragment into a single dataframe. For example, if I extracted six peaks, the 13C, 15N, and unsubstituted of fragments at 119 and 109, this would input a list of six dataframes (one per peak) and combine them into two dataframes (one per fragment), each including data from the 13C, 15N, and unsubstituted peaks of that fragment.
     
@@ -242,15 +256,15 @@ def _combineSubstituted(peakDF, cullOn = [], cullZeroScansOn = False, gc_elution
 
             #Cull zero scans
             if cullZeroScansOn == True:
-                df1 = _cullZeroScans(df1)
+                df1 = cull_Zero_Scans(df1)
             
             #Cull based on time frame for GC peaks
             if gc_elution_on == True and gc_elution_times != 0:
-                start_index, end_index = _cullOnGCPeaks(df1, thisGCElutionTimeRange, NL_over_TIC)
+                start_index, end_index = cull_On_GC_Peaks(df1, thisGCElutionTimeRange, NL_over_TIC)
             df1 = df1[start_index:end_index]
 
             #Calculates ratio values and adds them to the dataframe. Weighted averages will be calculated in the next step
-            df1 = _calcAppendRatios(df1,isotopeList = isotopeList)
+            df1 = calc_Append_Ratios(df1,isotopeList = isotopeList)
             #Given a key in the dataframe, culls scans outside specified multiple of standard deviation from the mean
             if cullOn != None:
                 if cullOn not in list(df1):
@@ -270,7 +284,7 @@ def _combineSubstituted(peakDF, cullOn = [], cullZeroScansOn = False, gc_elution
             pass
     return DFList
 
-def _cullZeroScans(df):
+def cull_Zero_Scans(df):
     '''
     Inputs:
         df: input dataframe to cull
@@ -282,7 +296,7 @@ def _cullZeroScans(df):
     return df
 
 
-def _cullOnGCPeaks(df, gcElutionTimeFrame = (0,0), NL_over_TIC=0.1):
+def cull_On_GC_Peaks(df, gcElutionTimeFrame = (0,0), NL_over_TIC=0.1):
     '''
     Inputs: 
         df: input dataframe to cull
@@ -298,7 +312,7 @@ def _cullOnGCPeaks(df, gcElutionTimeFrame = (0,0), NL_over_TIC=0.1):
     
     return start_index, end_index
     
-def _calcRawFileOutput(dfList, weightByNLHeight=False, isotopeList = ['13C','15N','UnSub'],omitRatios = []):
+def calc_Raw_File_Output(dfList, weightByNLHeight=False, isotopeList = ['13C','15N','UnSub'],omitRatios = []):
     '''
     For each ratio of interest, calculates mean, stdev, SErr, RSE, and ShotNoise based on counts. Outputs these in a dictionary which organizes by fragment (i.e different entries for fragments at 119 and 109).
     
@@ -361,7 +375,7 @@ def _calcRawFileOutput(dfList, weightByNLHeight=False, isotopeList = ['13C','15N
 
     return rtnDict
 
-def _calcFolderOutput(folderPath, cullOn=None, cullZeroScansOn=False, gcElutionOn=False, weightByNLHeight=False, gcElutionTimes = [],  cullAmount=2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC=0.10, omitRatios = [], fileCsvOutputPath=None):
+def calc_Folder_Output(folderPath, cullOn=None, cullZeroScansOn=False, gcElutionOn=False, weightByNLHeight=False, gcElutionTimes = [],  cullAmount=2, isotopeList = ['13C','15N','UnSub'], NL_over_TIC=0.10, omitRatios = [], fileCsvOutputPath=None):
     '''
     For each raw file in a folder, calculate mean, stdev, SErr, RSE, and ShotNoise based on counts. Outputs these in a dictionary which organizes by fragment (i.e different entries for fragments at 119 and 109).  
     Inputs:
@@ -396,10 +410,10 @@ def _calcFolderOutput(folderPath, cullOn=None, cullZeroScansOn=False, gcElutionO
     for i in range(len(fileNames)):
         thisFileName = str(folderPath + '/' + fileNames[i])
         print(thisFileName) #for debugging
-        thesePeaks = _importPeaksFromFTStatFile(thisFileName)
-        thisPandas = _convertToPandasDataFrame(thesePeaks)
-        thisMergedDF = _combineSubstituted(peakDF=thisPandas,cullOn=cullOn, cullZeroScansOn = cullZeroScansOn, gc_elution_on=gcElutionOn, gc_elution_times=gcElutionTimes, cullAmount=cullAmount, isotopeList=isotopeList, NL_over_TIC=NL_over_TIC, csv_output_path=fileCsvOutputPath)
-        thisOutput = _calcRawFileOutput(thisMergedDF, weightByNLHeight, isotopeList, omitRatios)
+        thesePeaks = import_Peaks_From_FTStatFile(thisFileName)
+        thisPandas = convert_To_Pandas_DataFrame(thesePeaks)
+        thisMergedDF = combine_Substituted_Peaks(peakDF=thisPandas,cullOn=cullOn, cullZeroScansOn = cullZeroScansOn, gc_elution_on=gcElutionOn, gc_elution_times=gcElutionTimes, cullAmount=cullAmount, isotopeList=isotopeList, NL_over_TIC=NL_over_TIC, csv_output_path=fileCsvOutputPath)
+        thisOutput = calc_Raw_File_Output(thisMergedDF, weightByNLHeight, isotopeList, omitRatios)
         keys = list(thisOutput.keys())
         peakNumber = len(keys)
 
@@ -446,7 +460,7 @@ def _calcFolderOutput(folderPath, cullOn=None, cullZeroScansOn=False, gcElutionO
     #output results to csv
     return rtnAllFilesDF, statsDF
            
-def _plotOutput(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCols = 2,widthMultiple = 4, heightMultiple = 4):
+def plot_Output(output,isotopeList = ['13C','15N','UnSub'],omitRatios = [],numCols = 2,widthMultiple = 4, heightMultiple = 4):
    #TODO: Fix this for the gc weighted average calculation
     '''
     Constructs a series of output plots for easy visualization
