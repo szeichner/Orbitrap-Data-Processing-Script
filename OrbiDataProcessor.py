@@ -21,24 +21,43 @@ import MethodFile
 import Peak
 
 class Watchdog(PatternMatchingEventHandler, Observer):
+    '''
+    This class watches a specific path for changes, and processes raw files as they are added or deleted to the path.
+
+    '''
     def __init__(self, path='.', patterns='*', logfunc=print):
+        '''
+        Instantiate the watchdog object
+        '''
         PatternMatchingEventHandler.__init__(self, patterns)
         Observer.__init__(self)
         self.schedule(self, path=path, recursive=False)
         self.log = logfunc
 
     def on_created(self, event):
+        '''
+        Action upon creation/addition of new file to the folder
+        '''
         #TODO: fix logic for watchdog
         #ProcessRawFile()
         #self.analyze_folder()
         self.log(f"RAW File added and processed: {event.src_path}")
 
     def on_deleted(self, event):
+        '''
+        Action upon deletion of a file to the folder
+        '''
         #self.analyze_folder()
         self.log(f"Raw file deleted: {event.src_path}!")
 
 class GUI:
+    '''
+    GUI for RAW file data processing and analysis
+    '''
     def __init__(self):
+        '''
+        Instantiate the GUI
+        '''
         self.folderName = '.'
         self.methodFile = []
         self.numPeaks = 0
@@ -52,7 +71,7 @@ class GUI:
         self.window.title("Welcome to the data processor")
         methodButton = Button(self.window, text="Create a method file", command=self.build_method_file)
         methodButton.grid(row=0, column=0)
-        dataFolderButton = Button(self.window, text='Choose data folder directory', command=self.browse_Folders)
+        dataFolderButton = Button(self.window, text='Choose data folder directory', command=self.set_local_directory_Folder)
         dataFolderButton.grid(row=1, column=0)
         self.autoWatchOn = IntVar()
         autoWatchOnCheckbutton = Checkbutton(self.window, text='Automatically watch folder?', variable =self.autoWatchOn, onvalue=1, offvalue=0, command=self.automatically_Watch_Files_On)
@@ -65,36 +84,29 @@ class GUI:
         #TODO: add styling to the GUI
         self.window.mainloop()
 
-    def start_watchdog(self):
-        if self.watchdog is None:
-            self.watchdog = Watchdog(path=self.folderName, logfunc=self.log)
-            self.watchdog.start()
-            self.log('Watchdog started')
-        else:
-            self.log('Watchdog already started')
-
-    def stop_watchdog(self):
-        if self.watchdog:
-            self.watchdog.stop()
-            self.watchdog = None
-            self.log('Watchdog stopped')
-        else:
-            self.log('Watchdog is not running')
-
     def log(self, message):
+        '''
+        Log alerts to the GUI
+        '''
         self.messagebox.insert(END, f'{message}\n')
         self.messagebox.see(END)
 
-    def browse_Folders(self):
+    def set_local_directory_Folder(self):
+        '''
+        Folder browser to select the local directory
+        '''
         self.folderName = filedialog.askdirectory(initialdir="/", title = "select a directory")
         self.log('Directory set:' + self.folderName)
 
     def analyze_File(self):
+        '''
+        Analyze one specific raw file
+        '''
         if self.folderName != "":
             pass
         else:
             self.log('Choose a working directory')
-            self.browse_Folders()
+            self.set_local_directory_Folder()
         fileName = filedialog.askopenfilename(initialdir = self.folderName,title = "Select RAW file to analyze",filetypes = (("RAW files","*.RAW"),("all files","*.*")))
         
         if self.methodFile != []:
@@ -105,11 +117,14 @@ class GUI:
             self.build_method_file()
 
     def analyze_Folder(self):
+        '''
+        Analyze all the raw files in the local directory
+        '''
         if self.folderName != "":
             pass
         else:
             self.log('Choose a working directory')
-            self.browse_Folders()
+            self.set_local_directory_Folder()
 
         if self.methodFile != []:
             #args = get_method_file_properties()
@@ -120,7 +135,13 @@ class GUI:
             self.build_method_file()
 
     def build_method_file(self):
+        '''
+        Toplevel window to build a method file based on a specified number of peaks
+        '''
         def exit_button():
+            '''
+            Exit out of top level
+            '''
             topLevel.destroy()
             topLevel.update()
 
@@ -140,7 +161,13 @@ class GUI:
         exit_button.grid(row=3, column = 0)
 
     def get_methodFile_input(self, peaksVar):
+        '''
+        Top level window to take in method file input and create new method file
+        '''
         def exit_button():
+            '''
+            Exit out of top level 
+            '''
             topLevel.destroy()
             topLevel.update()
 
@@ -202,6 +229,10 @@ class GUI:
         exit_button.grid(row=lastRowNum+6, column = 2)
 
     def submit_method_file(self, numPeaks, massVar, toleranceVar, toleranceUnitsVar, isotopeListVar, weightAvgToggleVar, elutionCurveToggleVar, csvOutputToggleVar, csvOutputPathVar):
+        '''
+        Take method file input within toplevel widget and create a method file output that is written to local directory and can be used for future data analysis
+        '''
+
         for peak in range(numPeaks):      
             thisMass = massVar["string{0}".format(peak)].get()
             thisTol = toleranceVar["string{0}".format(peak)].get()
@@ -219,11 +250,37 @@ class GUI:
         self.log("Method File created at location:" + str(os.curdir) + "/method.txt")
 
     def automatically_Watch_Files_On(self):
+        '''
+        Logic to monitor the watchdog toggle
+        '''
         autoWatchToggle = self.autoWatchOn.get()
         if autoWatchToggle == 0:
             self.stop_watchdog()
         elif autoWatchToggle ==1:
             self.start_watchdog()
+            
+    def start_watchdog(self):
+        '''
+        Start the watchdog on local directory when the checkbox is clicked
+        '''
+        if self.watchdog is None:
+            self.watchdog = Watchdog(path=self.folderName, logfunc=self.log)
+            self.watchdog.start()
+            self.log('Watchdog started')
+        else:
+            self.log('Watchdog already started')
+
+    def stop_watchdog(self):
+        '''
+        Stop the watchdog on local directory when the checkbox is un-clicked
+        '''
+        if self.watchdog:
+            self.watchdog.stop()
+            self.watchdog = None
+            self.log('Watchdog stopped')
+        else:
+            self.log('Watchdog is not running')
+
 
 if __name__ == '__main__':
     GUI()

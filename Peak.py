@@ -17,6 +17,9 @@ emass = 0.00054858
 
 # isotopologue input class
 class Peak:
+    '''
+    Object that includes information about mass, mass tolerance and tolerance unit for each peak of interest.
+    '''
     def __init__(self, mass, mass_tolerance, tolerance_unit):
         self.mass = mass
         self.mtol = mass_tolerance
