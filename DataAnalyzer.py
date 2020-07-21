@@ -1,7 +1,7 @@
 ##!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Last Modified: Monday July 20, 2020
+Last Modified: Tues July 21, 2020
 @author: sarahzeichner
 
 This code has all of the data processing code, to take data after it has been processed by FT statistic (or equivalent) and calculate isotope ratios based on input

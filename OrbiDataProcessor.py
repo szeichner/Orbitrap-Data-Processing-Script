@@ -1,7 +1,7 @@
 ##!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Last Modified: Monday July 20, 2020
+Last Modified: Tuesday July 21, 2020
 
 @author: sarahzeichner
 
@@ -21,6 +21,7 @@ from functools  import partial
 import DataAnalyzer
 import MethodFile
 import Peak
+import RawFileReaderHandler
 
 class Watchdog(PatternMatchingEventHandler, Observer):
     '''
@@ -42,6 +43,7 @@ class Watchdog(PatternMatchingEventHandler, Observer):
         '''
         
         #TODO: fix logic for watchdog
+        RawFileReaderHandler.ProcessRawFile()
         #ProcessRawFile()
         #self.analyze_folder()
 
@@ -224,7 +226,7 @@ class GUI:
 
         Label(topLevel, text="CSVOutputPath").grid(row=lastRowNum+4, column=0)
         csvOutputPathVar = StringVar()
-        csvOutputPath = Entry(topLevel, textvariable=csvOutputPathVar)ya
+        csvOutputPath = Entry(topLevel, textvariable=csvOutputPathVar)
         csvOutputPath.grid(row=lastRowNum+4, column=1)
 
         submitButton = Button(topLevel, text="SUBMIT", command= lambda *args:self.submit_method_file(numPeaks, massVar, toleranceVar, toleranceUnitsVar, isotopeListVar, weightAvgToggleVar, elutionCurveToggleVar, csvOutputToggleVar, csvOutputPathVar))
