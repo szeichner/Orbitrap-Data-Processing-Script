@@ -19,10 +19,7 @@ def ProcessFileOrFolder(methodFilePath, fileOrFolderPath, outputPath):
     #call .exe and pass in method to process the raw file to JSON
 
     #command = ".exe" 
-    command = r'.exe'
+    command = r'/Users/sarahzeichner/Documents/Caltech/Research/Code/Orbitrap Data Processing Script/SG-Statistic/SG-Statistic/bin/Debug/SG-Statistic.exe'
     output = check_output(command)
     
     return output
-
-
-
