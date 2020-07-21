@@ -320,7 +320,7 @@ def calc_Raw_File_Output(dfList, weightByNLHeight=False, isotopeList = ['13C','1
         weightByNLHeight: Specify whether you want to calculate weighted averages by NL score
         isotopeList: A list of isotopes corresponding to the peaks extracted by FTStat, in the order they were extracted. This must be the same for each fragment. This is used to determine all ratios of interest, i.e. 13C/UnSub, and label them in the proper order. 
         omitRatios: A list of ratios to ignore. I.e. by default, the script will report 13C/15N ratios, which one may not care about. In this case, the list should be ['13C/15N','15N/13C'], including both versions, to avoid errors. 
-        
+         
     Outputs: 
         A dictionary giving mean, stdev, StandardError, relative standard error, and shot noise limit for all peaks.  
     '''
