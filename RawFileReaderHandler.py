@@ -17,11 +17,10 @@ def ProcessFileOrFolder(methodFilePath, fileOrFolderPath, outputPath):
     args = [] #methodFilePath, fileOrFolderPath, outputPath
 
     #call .exe and pass in method to process the raw file to JSON
-    
+
     #command = ".exe" 
     command = r'.exe'
     output = check_output(command)
-
     
     return output
 

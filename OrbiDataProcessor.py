@@ -40,6 +40,7 @@ class Watchdog(PatternMatchingEventHandler, Observer):
         '''
         Action upon creation/addition of new file to the folder
         '''
+        
         #TODO: fix logic for watchdog
         #ProcessRawFile()
         #self.analyze_folder()
@@ -51,7 +52,7 @@ class Watchdog(PatternMatchingEventHandler, Observer):
         Action upon deletion of a file to the folder
         '''
         #self.analyze_folder()
-        
+
         self.log(f"Raw file deleted: {event.src_path}!")
 
 class GUI:
@@ -223,7 +224,7 @@ class GUI:
 
         Label(topLevel, text="CSVOutputPath").grid(row=lastRowNum+4, column=0)
         csvOutputPathVar = StringVar()
-        csvOutputPath = Entry(topLevel, textvariable=csvOutputPathVar)
+        csvOutputPath = Entry(topLevel, textvariable=csvOutputPathVar)ya
         csvOutputPath.grid(row=lastRowNum+4, column=1)
 
         submitButton = Button(topLevel, text="SUBMIT", command= lambda *args:self.submit_method_file(numPeaks, massVar, toleranceVar, toleranceUnitsVar, isotopeListVar, weightAvgToggleVar, elutionCurveToggleVar, csvOutputToggleVar, csvOutputPathVar))

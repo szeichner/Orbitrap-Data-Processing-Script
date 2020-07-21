@@ -1,8 +1,7 @@
 ##!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Last Modified: Thursday July 16, 2020
-
+Last Modified: Monday July 20, 2020
 @author: sarahzeichner
 
 This code has all of the data processing code, to take data after it has been processed by FT statistic (or equivalent) and calculate isotope ratios based on input
@@ -372,6 +371,15 @@ def calc_Raw_File_Output(dfList, weightByNLHeight=False, isotopeList = ['13C','1
                             rtnDict[massStr][header]['StError'] = rtnDict[massStr][header]['StDev'] / np.power(len(dfList[fragmentIndex]),0.5)
                             rtnDict[massStr][header]['RelStError'] = rtnDict[massStr][header]['StError'] / rtnDict[massStr][header]['Ratio']
                             rtnDict[massStr][header]['ShotNoiseLimit by Quadrature'] = (1/dfList[fragmentIndex]['counts' + isotopeList[i]].sum() +1/dfList[fragmentIndex]['counts' + isotopeList[j]].sum())**(1/2)
+                            
+                            averageTIC = np.mean(dfList[fragmentIndex]['tic'])
+                            valuesTIC = dfList[fragmentIndex]['tic']
+                            rtnDict[massStr][header]['TICVar'] =  math.sqrt(np.mean((valuesTIC-averageTIC)**2))/np.mean(valuesTIC)
+                            
+                            averageTICIT = np.mean(dfList[fragmentIndex]['TIC*IT'])
+                            valuesTICIT = dfList[fragmentIndex]['TIC*IT']
+                            rtnDict[massStr][header]['TIC*ITMean'] = averageTICIT
+                            rtnDict[massStr][header]['TIC*ITVar'] =  math.sqrt(np.mean((valuesTICIT-averageTICIT)**2))/np.mean(valuesTICIT)
 
     return rtnDict
 
@@ -401,7 +409,7 @@ def calc_Folder_Output(folderPath, cullOn=None, cullZeroScansOn=False, gcElution
     ratio = "Ratio"
     stdev = "StdDev"
     rtnAllFilesDF = []
-    header = ["FileNumber", "Fragment", "IsotopeRatio", "Average", "StdDev", "StdError", "RelStdError"]
+    header = ["FileNumber", "Fragment", "IsotopeRatio", "Average", "StdDev", "StdError", "RelStdError","TICVar","TIC*ITVar","TIC*ITMean"]
     #get all the file names in the folder with the same end 
     fileNames = [x for x in os.listdir(folderPath) if x.endswith(".xlsx")]
     peakNumber = 0
@@ -428,12 +436,11 @@ def calc_Folder_Output(folderPath, cullOn=None, cullZeroScansOn=False, gcElution
                 thisRVal = thisOutput[thisPeak][thisRatio]["Ratio"]
                 thisStdDev = thisOutput[thisPeak][thisRatio]["StDev"]
                 thisStError = thisOutput[thisPeak][thisRatio]["StError"] 
-                thisRelStError = thisOutput[thisPeak][thisRatio]["RelStError"] 
-
-                thisRow = [thisFileName, thisPeak, thisRatio, thisRVal, thisStdDev, thisStError,thisRelStError]
-
-                #TODO: finish adding these results to a datatable 
-
+                thisRelStError = thisOutput[thisPeak][thisRatio]["RelStError"]
+                thisTICVar = thisOutput[thisPeak][thisRatio]["TICVar"] 
+                thisTICITVar = thisOutput[thisPeak][thisRatio]["TIC*ITVar"]
+                thisTICITMean = thisOutput[thisPeak][thisRatio]["TIC*ITMean"]
+                thisRow = [thisFileName, thisPeak, thisRatio, thisRVal, thisStdDev, thisStError,thisRelStError,thisTICVar,thisTICITVar,thisTICITMean] 
                 rtnAllFilesDF.append(thisRow)
 
     rtnAllFilesDF = pd.DataFrame(rtnAllFilesDF)
