@@ -13,7 +13,7 @@ import json
 import pandas as pd
 import numpy as np
 
-def ProcessRawFile(methodFilePath, fileOrFolderPath, outputPath):
+def ProcessRawFile(methodFilePath, filePath, outputPath):
     '''
     Handle the call the C# .exe to process .RAW files into JSON that the data processing software can handle
     '''
@@ -27,7 +27,7 @@ def ProcessRawFile(methodFilePath, fileOrFolderPath, outputPath):
     
     return output
 
-def readFile(fileName):
+def ReadJsonRawFileAsDataFrame(fileName):
     '''
     Borrowed and modified from Tim's readAndRejectJSON.py script
     Takes a JSON output file from the .RAW file reader and turns it into a list of dataFrames. There is one dataFrame for each peak extracted from 
@@ -51,7 +51,7 @@ def readFile(fileName):
                 
     return dfList          
 
-def productTicIt(dfList):
+def CalculateTICITProduct(dfList):
     '''
     Takes a dataframe of outputs from SG-Statistic and adds a new column
     containing the product TICxIT
@@ -63,64 +63,25 @@ def productTicIt(dfList):
     '''
     
     for df in dfList:
-        df['TICxIT'] = df['SpectraTIC'] * df['IT']
+        df['TICxIT'] = df['TICList'] * df['ITList']
         dfListRev = dfList
     return dfListRev            
 
-def calcStatsTicIt(dfListRev):
+def ExportDataFrameToCSV(fileName, dfList): 
     '''
-    For each peak: calculates statistics on all scans of the product TICxIT
-    Inputs:
-        dfListRev: A list of dataframes, with one dataframe for each peak, and containing a column for TICxIT
-        
-    Outputs:
-        (mean, median, std): vectors containing the mean TICxIT, median TICxIT, and standard deviation of TICxIT for each peak. 
-    '''
-    median = np.zeros(len(dfListRev)) #create empty arrays to populate
-    mean = np.zeros(len(dfListRev))
-    std = np.zeros(len(dfListRev))
-    
-    for peak in range(len(dfListRev)):
-        median[peak] = dfListRev[peak]['TICxIT'].median() #not currently used, but may be useful for future culling decisions
-        mean[peak] = dfListRev[peak]['TICxIT'].mean()
-        std[peak] = dfListRev[peak]['TICxIT'].std()
-    return (median, mean, std)
+    Function to output dataframe to CSV if user wants that option
 
-def cullTicIt(mean, std, stdThreshold, dfListRev):
-    '''
-    Culls scans falling outside a specified number of standard deviations of the mean TICxIT.
-    Inputs:
-        mean: a vector containing the mean TICxIT for each peak
-        std: a vector containing the standard deviation of TICxIT for each peak
-        stdThreshold: a multiplier (float) specifying how many standard deviations from the mean should be included in the final culled dataset
-        dfListRev: A list of dataframes, with one dataframe for each peak, containing an added column for TICxIT
-        
-    Outputs:
-        dfCulled: A list of culled dataframes, with one dataframe for each peak.
-        Scans falling outside, e.g., 1 SD of the mean TICxIT have been removed.
-    '''  
-    dfCulled = []
-    
-    for peak in range(len(dfListRev)):
-        df = dfListRev[peak]
-        df = df[(df.TICxIT < mean[peak] + (stdThreshold * std[peak])) & 
-                (df.TICxIT > mean[peak] - (stdThreshold * std[peak]))] 
-        dfCulled.append(df)
-        
-    return dfCulled
-
-def dataExporter(fileName, dfCulled, dfList): #optional, in case we choose to output .csv files after culling for user records
-    '''
     fileNameExport = fileName + '_culled.csv'
     export = open(fileNameExport, 'wb')
     wrt = csv.writer(export, dialect = 'excel')
     export.close()
     '''
     fileName = fileName.rsplit( ".", 1 )[ 0 ] 
-    for peak in range(len(dfCulled)):
-        pk = str(peak)
-        dfCulled[peak].to_csv(fileName + 'peak' + pk + '_culled.csv')
     for peak in range(len(dfList)):
         pk = str(peak)
         dfList[peak].to_csv(fileName + 'peak' + pk + '_original.csv')
     return
+
+fileName = "/Users/sarahzeichner/Documents/Caltech/Research/Code/Orbitrap Data Processing Script/tester files/20200205_2_USGS37_full1.RAWoutput.txt"
+df = ReadJsonRawFileAsDataFrame(fileName)
+print(df)

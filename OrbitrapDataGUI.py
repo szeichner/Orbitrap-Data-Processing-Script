@@ -43,10 +43,8 @@ class Watchdog(PatternMatchingEventHandler, Observer):
         '''
         
         #TODO: fix logic for watchdog
-        RawFileReaderHandler.ProcessRawFile()
-        #ProcessRawFile()
+        RawFileReaderHandler.ProcessRawFile(self.methodFile, event.src_path, "output.txt")
         #self.analyze_folder()
-
         self.log(f"RAW File added and processed: {event.src_path}")
 
     def on_deleted(self, event):

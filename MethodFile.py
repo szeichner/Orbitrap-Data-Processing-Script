@@ -101,7 +101,7 @@ class MethodFile:
         masses = methodDictionary[self.massString]
         tolerances = methodDictionary[self.toleranceString]
         toleranceUnits = methodDictionary[self.toleranceUnitsString]
-
+        
         for mass in range(len(masses)):
             self.peaks.append(masses[mass], tolerances[mass], toleranceUnits[mass])
 
