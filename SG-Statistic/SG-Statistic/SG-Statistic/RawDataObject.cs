@@ -68,6 +68,11 @@ namespace SGStatistic
         /// </summary>
         public double[] RetentionTimeList { get; set; }
 
+        /// <summary>
+        /// List of noise bands for each scan
+        /// </summary>
+        public double[] NoiseList { get; set; }
+
 
         /// <summary>
         /// Instantiates and populates a raw data object based on input raw file and specified method
@@ -205,6 +210,7 @@ namespace SGStatistic
             TICList = new double[lastScanNumber];
             ITList = new double[lastScanNumber];
             RetentionTimeList = new double[lastScanNumber];
+            NoiseList = new double[lastScanNumber];
 
             try
             {
@@ -221,7 +227,13 @@ namespace SGStatistic
                     RetentionTimeList[scan] = inputRawFile.RetentionTimeFromScanNumber(thisScan);
                     ITList[scan] = GetScanExtraDouble(inputRawFile, thisScan, itHeaderParam);
 
-                    //TODO: get out noise for peaks
+                    //get noise for peaks
+                    LabelPeak[] labelPeaks = inputRawFile.GetCentroidStream(thisScan, true).GetLabelPeaks();
+                    foreach (var labelPeak in labelPeaks)
+                    {
+                        NoiseList[scan] = labelPeak.Noise;
+                        //todo: fix this for the loop
+                    }
 
                 }
             }

@@ -19,22 +19,21 @@ namespace SGStatistic
     internal static class Program
     {
 
-        public static void Main(string[] args)
+        public static void Main()
         {
-            //look for a method file in the input folder path
 
-            //Console.Write("Please input a folder path with .RAW files of interest for analysis");
-            string folderPath = args[0]; 
-            string methodFileName = args[1];
-            //Console.Write("Please input what path name you would like to append to each of your output files.");
-            string exportFileName = args[2];
+            //string args=[]
+
+            string filePath = "/Users/sarahzeichner/Documents/Caltech/Research/Code/SG-Statistic/testFolder/20200205_2_USGS37_full1.RAW"; //args[0]; 
+            string methodFileName = "/Users/sarahzeichner/Documents/Caltech/Research/Code/SG-Statistic/testFolder/method.txt"; //args[1];
+            string exportFileName = "output.txt"; //args[2];
 
             //Try get method file and list of raw file names from folder path
-            if(Directory.Exists(folderPath))
+            if(File.Exists(filePath))
             {
                 try
                 {
-                        RawDataProcessor thisProcessor = new RawDataProcessor(folderPath, methodFileName);
+                        RawDataProcessor thisProcessor = new RawDataProcessor(filePath, methodFileName);
                         thisProcessor.ProcessRawFile(thisProcessor.RawFilePathName, thisProcessor.MethodFile, exportFileName);
 
                 }

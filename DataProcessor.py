@@ -39,7 +39,7 @@ def Read_Process_RAW_File_JSON(methodFilePath, rawFilePath, outputToCSVOn = Fals
     Process each JSON with raw file input
     '''
     outputPath = "output.txt"
-    methodFile = MethodFile.MethodFile.ReadMethodFile(methodFilePath) #TODO : fix method file OOP structure so you can create method file object from reading in
+    methodFile = MethodFile.ReadMethodFile(methodFilePath) 
     peaks = RawFileReaderHandler.ReadJsonRawFileAsDataFrame(rawFilePath)
     peaks = RawFileReaderHandler.CalculateTICITProduct(peaks)
 
